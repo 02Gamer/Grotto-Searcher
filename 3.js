@@ -2235,7 +2235,7 @@ const usage=proof.usage.find(row=>row.index===proof.assign[ci]),actionUsage=usag
 const statText=solverActionStatText(proof,ci);
 const equipment=actionUsage&&WEAPON_META[actionUsage.equip]?' · '+L64+' '+solverConditionText(solverWeaponName(actionUsage.equip)):'';
 const atStr=' · AT '+(a.at||0)+equipment+(statText?' · '+solverConditionText(statText):'');
-if(a.id===SK_EGG){
+if(a.jp==='おうえん'){
 const target=eggTargets[ci],beneficiary=target===undefined?'?':
 L20+((assign?assign[target]:target%4)+1)+' '+sn(combo[target]);
 html+=lead+'<span style="color:#ff0;">'+sn(a)+'</span> → '+beneficiary+atStr+'</div>';
@@ -2246,7 +2246,7 @@ html+=lead+'<span style="color:#f80;">'+sn(a)+'</span> → '+T('All allies','全
 continue;
 }
 if(!row){html+=lead+sn(a)+atStr+'</div>';continue;}
-if(a.id===SK_MERCY){
+if(a.jp==='みのがす'){
 const removed=row.targets.map(t=>names[t.index]);
 html+=lead+'<span style="color:#0ff;">'+sn(a)+'</span>'+atStr+' → '+
 (removed.length?removed.join(',')+L24:L25)+L27+remainingText(row.remaining)+'</div>';
