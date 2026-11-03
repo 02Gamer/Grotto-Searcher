@@ -59,7 +59,7 @@ window._solverComboMap={};window._solverComboId=m.idBase||0;
 window._solverBucketId=m.bucketBase||0;window._solverBuckets={};
 window._solverFallback=!!m.initialFallback;window._solverSolvable=null;
 window._solverNeedsKillAll=null;
-_solverSearchIncomplete=false;_solverRenderDepth=0;
+_solverSearchIncomplete=false;_solverRenderDepth=0;_solverGoldState=null;
 }
 self.addEventListener('message',(e)=>{
 const m=e.data;

@@ -578,7 +578,7 @@ populateDropdownObj('cond_boss',BOSS_NAMES,0,2);
 const boxRow=document.querySelector('.chest-count-row');
 for(let r=10;r>=1;r--)boxRow.insertAdjacentHTML('beforeend',`<label>${CHEST_RANK[r]} <input type="number" id="cond_box_${CHEST_RANK[r]}" min="0" max="40" class="cbox-in"></label>`);
 const anomOpts=o=>Object.entries(o).map(([k,v])=>`<option value="${k}" data-i18n="${v.i18n}"></option>`).join('');
-byId('cond_anomaly').insertAdjacentHTML('beforeend',anomOpts(_ANOM_RULE)+'<option disabled>─────</option>'+anomOpts(USP_FAST_MODES));
+byId('cond_anomaly').insertAdjacentHTML('beforeend',anomOpts(ANOM_RULE)+'<option disabled>─────</option>'+anomOpts(USP_FAST_MODES));
 let topIds=["0B5","01B","0B9"];
 let seenIds=new Set(topIds);
 let envOrder=[1,2,3,4,5];
@@ -726,9 +726,10 @@ alert(A06);
 return;
 }
 let txtContent="RANK,SEED,"+T('Result','搜尋結果','検索結果')+"\n";
+const envNames=new Set(Object.values(ENV_NAMES).flat().map(n=>n.toLowerCase()));
 const keepLine=line=>{
 if(/Lv\.?\s*\d+/i.test(line))return false;
-if(Object.values(ENV_NAMES).flat().some(n=>n.toLowerCase()===line.toLowerCase()))return false;
+if(envNames.has(line.toLowerCase()))return false;
 return true;
 };
 const tagLines=row=>{

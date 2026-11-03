@@ -305,10 +305,9 @@ if(roots.length===0)return[];
 if(roots.length<2)return null;
 return roots.map(root=>[root]);
 }
-function solverShardCapsFilled(spec,merged){
-if(spec.sSkills)return spec.spaces.every(sp=>(merged[sp.key]||[]).length>=sp.cap);
-return spec.spaces.every(sp=>sp.depths.every(depth=>
-(merged[sp.key]||[]).reduce((n,c)=>n+(c.length===depth?1:0),0)>=sp.cap));
+function solverShardCapsFilled(spec,counts){
+if(spec.sSkills)return spec.spaces.every(sp=>counts.get(sp.key).total>=sp.cap);
+return spec.spaces.every(sp=>sp.depths.every(depth=>(counts.get(sp.key).depths.get(depth)||0)>=sp.cap));
 }
 async function runParallelSolverShards(type,spec,common,pool,operation){
 const groups=partitionSolverRoots(spec,pool.workers.length);
@@ -316,6 +315,7 @@ if(groups===null)return null;
 if(groups.length===0)return mergeSolverShardPayloads(spec,[]);
 window._solverLastParallelDispatch={type,workers:pool.workers.length,shards:0,roots:0,totalRoots:groups.length};
 const payloads=[],waveWidth=Math.max(2,pool.workers.length*2);
+const counts=new Map(spec.spaces.map(sp=>[sp.key,{kept:new Map(),total:0,depths:new Map()}]));
 for(let start=0;start<groups.length;start+=waveWidth){
 const wave=groups.slice(start,start+waveWidth);
 const settled=await Promise.all(wave.map(roots=>
@@ -323,11 +323,35 @@ queueSolverWorkerMessage(Object.assign({},common,{type,spec,roots}),false,operat
 if(operation.cancelled||operation.gen!==_siSolveGen)throw operation.error||makeSolverCancellationError('Solver generation changed');
 const failed=settled.find(x=>x.error);
 if(failed)throw failed.error;
-payloads.push(...settled.map(x=>x.value.payload));
+for(const item of settled){
+const payload=item.value.payload;
+payloads.push(payload);
+for(const space of spec.spaces){
+const rows=payload&&payload.buckets&&payload.buckets[space.key];
+if(!rows)continue;
+const count=counts.get(space.key);
+for(const row of rows){
+const depth=space.depths?row.depth:null;
+if(space.depths&&!space.depths.includes(depth))continue;
+let kept=count.kept.get(depth)||0;
+const combos=row.combos||[];
+if(spec.sSkills){
+const added=Math.min(combos.length,Math.max(0,Math.ceil(space.cap-kept)));
+kept+=added;count.total+=added;
+}else{
+for(let i=0;i<combos.length&&kept<space.cap;i++){
+const length=combos[i].length;
+count.depths.set(length,(count.depths.get(length)||0)+1);
+kept++;count.total++;
+}
+}
+count.kept.set(depth,kept);
+}
+}
+}
 window._solverLastParallelDispatch.shards+=wave.length;
 window._solverLastParallelDispatch.roots+=wave.reduce((s,g)=>s+g.length,0);
-const partial=mergeSolverShardPayloads(spec,payloads);
-if(solverShardCapsFilled(spec,partial))return partial;
+if(solverShardCapsFilled(spec,counts))break;
 }
 return mergeSolverShardPayloads(spec,payloads);
 }
@@ -468,40 +492,6 @@ if(_siSolveBusy.size===0)return;
 for(const[wi,t]of _siSolveBusy){_siSolveQueue.unshift(t);replaceSolveWorker(wi);}
 _siSolveBusy.clear();
 }
-function runSolveTaskOnMain(render,idBase,bucketBase,blockFallback=false){
-const options=Object.assign(snapshotSolverOptions(),{blockFallback}),cacheKey=solverResultCacheKey(render,options);
-let result=getCachedSolverResult(cacheKey,idBase,bucketBase);
-if(!result){
-const comboMap=window._solverComboMap,buckets=window._solverBuckets;
-window._solverComboMap={};window._solverBuckets={};
-let flag=null;
-try{
-if(blockFallback){
-flag=byId('si_blockFallback');
-if(!flag){
-flag=document.createElement('input');
-flag.type='checkbox';flag.id='si_blockFallback';flag.hidden=true;
-document.body.appendChild(flag);
-}
-flag.checked=true;
-}
-window._solverComboId=idBase;
-window._solverBucketId=bucketBase;window._solverFallback=false;window._solverSolvable=null;
-window._solverNeedsKillAll=null;
-const html=renderSolverResult(render.bat,render.monGroups,render.monId,render.mapDeft,render.canRound2,
-false,null,null,false,false,false,render.userDeft);
-result={html,comboMap:window._solverComboMap,buckets:window._solverBuckets,fallback:window._solverFallback||false,solvable:window._solverSolvable,incomplete:_solverSearchIncomplete};
-if(!blockFallback&&result.solvable===false&&!result.incomplete&&solverFieldBlock(render.monGroups.filter(g=>g.count>0).map(g=>g.hex))>0)result.needsBlockFallback=true;
-result=rebaseSolverCachedResult(setCachedSolverResult(cacheKey,result,idBase,bucketBase),idBase,bucketBase);
-}finally{
-if(flag)flag.checked=false;
-window._solverComboMap=comboMap;window._solverBuckets=buckets;
-}
-}
-Object.assign(window._solverComboMap,result.comboMap||{});
-Object.assign(window._solverBuckets,result.buckets||{});
-return result;
-}
 (function(){
 if(typeof document==='undefined'||!document.createElement||!document.body||
 !document.body.appendChild||!document.body.removeChild||
@@ -630,7 +620,7 @@ if(el.tagName==='OPTION'&&b3fThreeItems.includes(el.value)){text=String(text)+St
 el.textContent=text;
 }
 });
-for(const[id,label]of Object.entries(_OG)){const el=byId(id);if(el)el.label=label;}
+for(const[id,label]of Object.entries(OG)){const el=byId(id);if(el)el.label=label;}
 const sl=byId('at_lblSteps');if(sl)sl.textContent=H05;
 if(typeof updateFSItems==='function'){for(let i=1;i<=3;i++)updateFSItems(i);}
 ['at_pattern','si_pattern'].forEach(sid=>{
@@ -825,7 +815,7 @@ return cand.sortCost<cur.sortCost;
 }
 function executeSharedSearch(config){
 if(isSearching){requestSearchCancel();return;}
-const conds=getUltimateConds();
+const conds=config.conds||getUltimateConds();
 if(config.condsTransform)config.condsTransform(conds);
 const searchFilterLoc=config.searchFilterLoc!==undefined?config.searchFilterLoc:readSearchFilterLoc();
 if(!getLocationBQFilters(conds).valid){
@@ -978,9 +968,10 @@ return true;
 function startUltimateSearch(){
 const conds=getUltimateConds();
 if(!validateElistOnlyMonCombo(conds))return;
-if(USP_FAST_MODES[conds.anomaly]){startFastestSearch();return;}
+if(USP_FAST_MODES[conds.anomaly]){startFastestSearch(conds);return;}
 const searchOnlyWithD=byId('searchOnlyWithD').checked;
 executeSharedSearch({
+conds,
 btnId:'searchBtnSpecific',
 btnText:'🎯 Search',
 emptyRankMsg:B07,
@@ -1010,6 +1001,7 @@ const requireBugFloorHitNode=byId('requireBugFloorHit');
 const requireBugFloorHit=requireBugFloorHitNode?requireBugFloorHitNode.checked:false;
 if(!cond_elist&&!cond_only_mon&&!searchOnlyWithD&&!conds.hasBoxCond){effectiveElistCond='ONLY';}
 executeSharedSearch({
+conds,
 btnId:'searchBtnBug',
 btnText:H07,
 stopText:'STOP',
@@ -1035,8 +1027,7 @@ let el=byId(id);
 if(el){el.checked=false;}
 });
 }
-function startFastestSearch(){
-const conds=getUltimateConds();
+function startFastestSearch(conds=getUltimateConds()){
 if(!validateElistOnlyMonCombo(conds))return;
 if(conds.elist==='MULTI_SPECIAL'){alert(A13);return;}
 const fm=USP_FAST_MODES[conds.anomaly];
@@ -1055,6 +1046,7 @@ const metricType=fm?fm.metric:null;
 const dedupBySeed=isMaxTile||(useDepth2&&parseInt(conds.depth)>=15&&allRanksOn);
 const searchOnlyWithD=byId('searchOnlyWithD').checked;
 executeSharedSearch({
+conds,
 btnId:'searchBtnSpecific',
 btnText:'🎯 Search',
 emptyRankMsg:B07,
@@ -1113,7 +1105,7 @@ return(arr,sortCmp,grid)=>{
 const groups={};
 for(const it of arr){const d=it._dimLabel||'?';if(!groups[d])groups[d]=[];groups[d].push(it);}
 const fr=document.createDocumentFragment();
-for(const dim of _MAXTILE_DIMS){
+for(const dim of MAXTILE_DIMS){
 const dl=dim+'x'+dim;const g=groups[dl];if(!g||g.length===0)continue;
 g.sort(sortCmp);
 const top=cutTies(g,10);
@@ -1830,19 +1822,19 @@ mrtRenderRows();
 }
 window.addEventListener('resize',()=>{if(byId('marathonModal').classList.contains('open'))mrtResizeMain();});
 function siBuildSeqHtml(seqArray){
-const _GC=[
+const GC=[
 [['#f44','#ccc'],['#c018a0','#ccc']],
 [['#4c4','#ccc'],['#fa0','#ccc']],
 [['#00A2E8','#ccc'],['#88f','#ccc']]
 ];
-const _BK=['','rgba(255,136,255,0.25)','rgba(34,177,76,0.25)','rgba(0,162,232,0.25)','rgba(255,170,0,0.25)'];
+const BK=['','rgba(255,136,255,0.25)','rgba(34,177,76,0.25)','rgba(0,162,232,0.25)','rgba(255,170,0,0.25)'];
 let items=seqArray.map(item=>{
 let gi=item.gIdx!==undefined?item.gIdx:0;
 let ri=item.isR!==undefined?(item.isR?0:1):0;
-let cp=_GC[gi]?(_GC[gi][ri]||_GC[0][0]):_GC[0][0];
+let cp=GC[gi]?(GC[gi][ri]||GC[0][0]):GC[0][0];
 let color=item.red?cp[0]:cp[1];
 let fw=item.red?'bold':'normal';
-let bg=_BK[item.bk]||'';
+let bg=BK[item.bk]||'';
 let bgStyle=bg?`background:${bg};padding:0 2px;border-radius:2px;`:'';
 return`<span style="color:${color};font-weight:${fw};${bgStyle}" title="${item.type}">${item.val}</span>`;
 });
@@ -1869,9 +1861,7 @@ const patSel=byId('si_pattern');
 if(patSel){
 patSel.options.length=0;
 patSel.options.add(new Option('----','none'));
-AT_O.forEach(pair=>{
-patSel.options.add(new Option(pair[1],pair[0]));
-});
+appendPatternOptions(patSel);
 }
 }
 function updateSeedInspector(){var _ios15,_ios16;
@@ -2116,7 +2106,7 @@ return'<div style="font-size:9px;color:#666;margin:4px 0 2px 0;line-height:1.6;"
 }
 function initSolverStatInputs(){
 for(let i=1;i<=4;i++){
-for(const f of SOLVER_STAT_FIELDS.filter(f=>!f.solverOnly)){const input=byId('si_'+f.dom+i);if(input){input.min=f.min;input.max=f.max;input.step=1;}}
+for(const f of SOLVER_STAT_FIELDS.filter(f=>!f.solverOnly)){const input=byId('si_'+f.dom+i);if(input){input.min=f.min;input.max=999;input.step=1;}}
 const atk=byId('si_atk'+i);
 if(atk){
 atk.min=0;atk.max=999;atk.step=1;
@@ -2147,11 +2137,7 @@ const request=st.request,gen=_siSolveGen,el=byId(request.elementId),prompt=byId(
 if(!el||!prompt)return;
 st.loading=true;prompt.textContent=L43;
 try{
-await new Promise(resolve=>setTimeout(resolve,0));
-if(gen!==_siSolveGen||byId(request.elementId)!==el)return;
-const result=request.mainThread||!getSearchWorkerPool()
-?runSolveTaskOnMain(request.render,request.idBase,request.bucketBase,true)
-:await queueSolveTask(request.render,Object.assign({},request.options,{blockFallback:true,blockStages:request.stages}),request.idBase,request.bucketBase);
+const result=await queueSolveTask(request.render,Object.assign({},request.options,{blockFallback:true,blockStages:request.stages}),request.idBase,request.bucketBase);
 if(gen!==_siSolveGen||byId(request.elementId)!==el)return;
 if(!result||typeof result.solvable!=='boolean'){
 prompt.textContent=T('Result unknown — click to retry alternatives','結果未知，點擊重試替代方案','結果は不明です — クリックして代替案を再計算');
@@ -2390,7 +2376,7 @@ const ov=byId('si_submodal');
 if(ov){ov.style.display='none';const b=byId('si_submodal_body');if(b)b.innerHTML='';}
 }
 function solverTaskOutputSignature(htmlStr,useStats){
-const rawHtml=htmlStr||'<div style="color:#666;font-size:10px;margin-left:16px;">—</div>';
+const rawHtml=htmlStr||SOLVER_DASH;
 const comboIds=[];
 const comboPattern=/expandCombo\((\d+)\)/g;
 let comboMatch;
@@ -2414,7 +2400,7 @@ useStats?(r.outcomeSig||''):''].join('\x1d');
 const detailSig=comboIds.map(id=>{
 const e=window._solverComboMap&&window._solverComboMap[id];
 if(!e)return'missing:'+id;
-return[rowSig(e),...(e.planVariants||[]).map(rowSig),e.planVariantsHidden||0].join('\x1e');
+return[rowSig(e),...(e.planVariants||[]).map(rowSig),'\x1f',...(e.skillVariants||[]).map(rowSig)].join('\x1e');
 }).join('\x1c');
 return htmlSig+'\x1b'+detailSig;
 }
@@ -2490,11 +2476,7 @@ if(tasks.length===0)return;
 const ID_SPAN=100000,BK_SPAN=1000;
 const _fill=(i,htmlStr)=>{
 const el=byId(taskElementIds[i]);
-if(el)el.innerHTML=htmlStr||'<div style="color:#666;font-size:10px;margin-left:16px;">—</div>';
-};
-const _mergeState=(m)=>{
-if(m.comboMap)Object.assign(window._solverComboMap,m.comboMap);
-if(m.buckets)Object.assign(window._solverBuckets,m.buckets);
+if(el)el.innerHTML=htmlStr||SOLVER_DASH;
 };
 const taskResults=new Array(tasks.length);
 let completedTasks=0;
@@ -2514,14 +2496,15 @@ const duplicateRow=byId(meta.rowId);
 if(duplicateRow)duplicateRow.remove();
 }
 };
-const _completeTask=(i,result,stateAlreadyMerged)=>{
+const _completeTask=(i,result)=>{
 if(viewGen!==_siSolveGen)return;
-if(!stateAlreadyMerged)_mergeState(result);
+if(result.comboMap)Object.assign(window._solverComboMap,result.comboMap);
+if(result.buckets)Object.assign(window._solverBuckets,result.buckets);
 const verdict=cacheFleeVerdictResult(tasks[i],options,result);
 const meta=taskMeta[i];
 if(result.needsBlockFallback){
 const bucketId='sb'+i*BK_SPAN;
-window._solverBuckets[bucketId]={blocked:true,request:{render:tasks[i],options,stages:result.blockStages,idBase:i*ID_SPAN,bucketBase:i*BK_SPAN,elementId:taskElementIds[i],descId:meta&&meta.descId,killAllDesc:meta&&meta.killAllDesc,mainThread:stateAlreadyMerged}};
+window._solverBuckets[bucketId]={blocked:true,request:{render:tasks[i],options,stages:result.blockStages,idBase:i*ID_SPAN,bucketBase:i*BK_SPAN,elementId:taskElementIds[i],descId:meta&&meta.descId,killAllDesc:meta&&meta.killAllDesc}};
 const prompt='<div id="'+bucketId+'_blk" style="font-size:10px;margin-left:16px;color:#08c;cursor:pointer;" onclick="showBlockFallback(\''+bucketId+'\')">'+L17+'</div>';
 taskResults[i]={html:prompt,flee:false,needsBlockFallback:true};
 _fill(i,prompt);
@@ -2560,29 +2543,16 @@ _fill(i,taskResults[i].html);
 completedTasks++;
 if(completedTasks===tasks.length)_mergeEquivalentPatterns();
 };
-const pool=getSearchWorkerPool();
-if(!pool){
-let i=0;
-const step=()=>{
-if(viewGen!==_siSolveGen||i>=tasks.length)return;
-const result=runSolveTaskOnMain(tasks[i],i*ID_SPAN,i*BK_SPAN);
-_completeTask(i,result,true);
-i++;setTimeout(step,0);
-};
-setTimeout(step,0);
-return;
-}
 tasks.forEach((task,i)=>{
 queueSolveTask(task,options,i*ID_SPAN,i*BK_SPAN).then((m)=>{
 if(viewGen!==_siSolveGen)return;
-_completeTask(i,m,false);
+_completeTask(i,m);
 }).catch((e)=>{
 if(viewGen!==_siSolveGen)return;
-console.warn('[Solver] Worker solve 失敗,該任務退回主執行緒:',e&&e.message);
-setTimeout(()=>{
-if(viewGen!==_siSolveGen)return;
-_completeTask(i,runSolveTaskOnMain(task,i*ID_SPAN,i*BK_SPAN),true);
-},0);
+console.warn('[Solver] Worker solve 失敗:',e&&e.message);
+_fill(i,`<div style="font-size:9px;margin-left:16px;"><span style="color:#fa0;">${T('Worker failed. Result unknown.','Worker 失敗，結果未知。','Worker が失敗したため結果は不明です。')}</span></div>`);
+completedTasks++;
+if(completedTasks===tasks.length)_mergeEquivalentPatterns();
 });
 });
 }

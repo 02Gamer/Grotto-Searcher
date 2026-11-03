@@ -214,7 +214,7 @@ const i18nDict={
 'EL_M':EL_M,'EL_P':EL_P,'EL_4':EL_4,'EL_3':EL_3,'EL_2':EL_2,'EL_1':EL_1,'EL_0':EL_0,
 'L01':L01,'L02':L02,'L03':L03,'L04':L04,'L48':L48,
 };
-const _OG={og1:T('Materials','素材/消耗品'),ogS:T('B9F Items','B9F物品','B9Fアイテム'),og2:T('Rare Equipment','限定裝備/大富豪','限定装備/大富豪'),og3:T('Cursed Equipment','詛咒裝備','呪い装備'),og4:T('Other Equipment','其他裝備','その他の装備'),og5:T('Chest Monsters','寶箱怪','宝箱モンスター')};
+const OG={og1:T('Materials','素材/消耗品'),ogS:T('B9F Items','B9F物品','B9Fアイテム'),og2:T('Rare Equipment','限定裝備/大富豪','限定装備/大富豪'),og3:T('Cursed Equipment','詛咒裝備','呪い装備'),og4:T('Other Equipment','其他裝備','その他の装備'),og5:T('Chest Monsters','寶箱怪','宝箱モンスター')};
 const b3fThreeItems=["Mini medal","Sage's elixir","Iron nails","Hephaestus' flame"];
 const MAP_RANK=[0x02,0x38,0x3D,0x4C,0x51,0x65,0x79,0x8D,0xA1,0xB5,0xC9,0xDD];
 const CHEST_RANK={10:'S',9:'A',8:'B',7:'C',6:'D',5:'E',4:'F',3:'G',2:'H',1:'I'};
@@ -1394,9 +1394,9 @@ return{kind:'normal'};
 }
 const _anom_visited=new Uint8Array(256);
 const _anom_queue=new Uint16Array(256);
-const _DIR_X=new Int8Array([0,0,-1,1,1,1,-1,-1]);
-const _DIR_Y=new Int8Array([-1,1,0,0,1,-1,1,-1]);
-const _DIR_W=new Float64Array([1,1,1,1,1.5,1.5,1.5,1.5]);
+const DIR_X=new Int8Array([0,0,-1,1,1,1,-1,-1]);
+const DIR_Y=new Int8Array([-1,1,0,0,1,-1,1,-1]);
+const DIR_W=new Float64Array([1,1,1,1,1.5,1.5,1.5,1.5]);
 const isMainWalkable=(tile)=>tile!==1&&tile!==3;
 const isIsoWalkable=(tile)=>tile===0||tile===2||tile===8;
 function scanGhostStairs(di,out){
@@ -1427,8 +1427,8 @@ regionSize++;
 const cx=curr&0xF;
 const cy=curr>>4;
 for(let i=0;i<4;i++){
-const nx=cx+_DIR_X[i];
-const ny=cy+_DIR_Y[i];
+const nx=cx+DIR_X[i];
+const ny=cy+DIR_Y[i];
 if(nx>=0&&nx<width&&ny>=0&&ny<height){
 const nIdx=(ny<<4)|nx;
 if(!_anom_visited[nIdx]){
@@ -1492,11 +1492,11 @@ else{cached.isolatedRegions=isolatedRegions.slice();delete cached.visited;}
 }
 return{hasChamber,hasInaccessibleChest,hasInaccessibleStair,isolatedRegions,totalChests:boxes};
 }
-const _USP_STRIDE=18;
-const _uspDIST=new Float64Array(_USP_STRIDE*_USP_STRIDE);
-const _uspWALK=new Uint8Array(_USP_STRIDE*_USP_STRIDE);
+const USP_STRIDE=18;
+const _uspDIST=new Float64Array(USP_STRIDE*USP_STRIDE);
+const _uspWALK=new Uint8Array(USP_STRIDE*USP_STRIDE);
 const _uspOFS=new Int32Array(8);
-for(let k=0;k<8;k++)_uspOFS[k]=_DIR_Y[k]*_USP_STRIDE+_DIR_X[k];
+for(let k=0;k<8;k++)_uspOFS[k]=DIR_Y[k]*USP_STRIDE+DIR_X[k];
 const _uspHC=new Float64Array(4096);
 const _uspHN=new Int32Array(4096);
 let _uspHS=0,_uspPC=0;
@@ -1529,7 +1529,7 @@ const W=di[2],H=di[3];
 if(W<=0||H<=0)return null;
 if(sx===gx&&sy===gy)return 0;
 if(sx<0||sx>=W||sy<0||sy>=H||gx<0||gx>=W||gy<0||gy>=H)return null;
-const S=_USP_STRIDE,dist=_uspDIST,slot=eng._floorSlot&&eng._floorSlot[f];
+const S=USP_STRIDE,dist=_uspDIST,slot=eng._floorSlot&&eng._floorSlot[f];
 let paths=slot&&slot.paths;
 const walk=paths?paths.walk:_uspWALK;
 if(!paths){
@@ -1553,8 +1553,8 @@ if(nd===goal){if(paths)paths.costs.set(key,co);return co;}
 for(let k=0;k<8;k++){
 const ni=nd+_uspOFS[k];
 if(!walk[ni])continue;
-if(k>=4&&(!walk[nd+_DIR_X[k]]||!walk[nd+_DIR_Y[k]*S]))continue;
-const nc=co+_DIR_W[k];
+if(k>=4&&(!walk[nd+DIR_X[k]]||!walk[nd+DIR_Y[k]*S]))continue;
+const nc=co+DIR_W[k];
 if(nc<dist[ni]){dist[ni]=nc;pushAstarNode(nc+h(ni),ni);}
 }
 }
