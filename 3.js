@@ -2251,7 +2251,7 @@ return names[t.index]+': '+hpRange(before)+'→<span style="color:'+
 (ko?'#f44':possible?'#f80':'#8f8')+';">'+Math.max(0,t.hpLow)+'~'+Math.max(0,t.hp)+
 '</span>'+(ko?L32:possible?L33:'');
 }).join(' / ');
-html+=lead+'<span style="color:#ccc;">'+sn(a)+'</span>'+mulStr+' ['+kind+']'+atStr+count+' → '+
+html+=lead+'<span style="color:#ccc;">'+sn(a)+(row.miss?' 💨':'')+'</span>'+mulStr+' ['+kind+']'+atStr+count+' → '+
 detail+L27+remainingText(row.remaining)+'</div>';
 }
 if((defend==null?void 0:defend.length))html+='<div style="color:#789;margin-top:1px;">'+L34+
