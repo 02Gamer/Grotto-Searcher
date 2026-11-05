@@ -16,15 +16,7 @@
 <button class="lang-sw" data-lang="JP" onclick="switchUILang('JP')">日本語</button>
 </div>
 </div>
-<div id="controls_container" style="display:flex;justify-content:center;padding-bottom:20px;border-bottom:2px solid #4a4a8a;">
-<div id="single_map_controls" style="display:flex;align-items:center;background:#0a0a15;padding:6px 12px;border-radius:6px;border:1px solid #335;">
-<label for="rank" style="color:#aaa;font-size:13px;font-weight:bold;">Rank</label>
-<select id="rank" style="background:#000;color:#0f0;border:1px solid #555;padding:4px;font-size:14px;width:65px;"></select>
-<label for="seed" style="color:#aaa;font-size:13px;font-weight:bold;margin-left:4px;">Seed</label>
-<input type="text" id="seed" value="263C" maxlength="4" placeholder="Hex" style="text-transform:uppercase;font-family:monospace;font-size:14px;width:60px;text-align:center;background:#000;color:#0f0;border:1px solid #555;padding:4px;">
-<button class="go" onclick="calculate()" style="background:linear-gradient(135deg,#0ff,#08a);color:#000;border:none;padding:6px 16px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;margin-left:8px;">Go</button>
-</div>
-</div>
+<div style="display:flex;justify-content:center;padding-bottom:20px;border-bottom:2px solid #4a4a8a;"></div>
 <script src="1.js"></script>
 <script src="2.js"></script>
 <script src="3.js"></script>
@@ -5258,7 +5250,24 @@ Finally, the remaining 12 floors of the <strong>effective upper-bound Seed</stro
 <div id="searchResults" style="margin-top:10px;padding:12px;background:#0a0a15;border:1px solid #4a4a8a;border-radius:6px;min-height:100px;">
 <div style="color:#666;font-size:13px;text-align:center;margin-top:12px;"></div>
 </div></div>
-<div id="result"></div>
+<div id="result">
+<div id="map_summary"></div>
+<div class="info-bar" style="align-items:center;background:#16162a;border-bottom:1px solid #4a4a8a;padding:8px 14px;gap:6px;">
+<span id="map_box_label" style="color:#88b;font-weight:bold;white-space:nowrap;"></span>
+<div id="map_box_counts" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;min-width:0;"></div>
+<span id="map_box_total" style="white-space:nowrap;padding-left:8px;border-left:2px solid #4a4a8a;color:#8cc8ff;font-weight:bold;"></span>
+<div id="controls_target_area" style="display:flex;align-items:center;">
+<div id="single_map_controls" style="display:flex;align-items:center;background:#0a0a15;padding:6px 12px;border-radius:6px;border:1px solid #335;">
+<label for="rank" style="color:#aaa;font-size:13px;font-weight:bold;">Rank</label>
+<select id="rank" style="background:#000;color:#0f0;border:1px solid #555;padding:4px;font-size:14px;width:65px;"></select>
+<label for="seed" style="color:#aaa;font-size:13px;font-weight:bold;margin-left:4px;">Seed</label>
+<input type="text" id="seed" value="263C" maxlength="4" placeholder="Hex" style="text-transform:uppercase;font-family:monospace;font-size:14px;width:60px;text-align:center;background:#000;color:#0f0;border:1px solid #555;padding:4px;">
+<button class="go" onclick="calculate()" style="background:linear-gradient(135deg,#0ff,#08a);color:#000;border:none;padding:6px 16px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;margin-left:8px;">Go</button>
+</div>
+</div>
+</div>
+<div id="map_floors"></div>
+</div>
 <hr>
 <div class="info-bar">
 <span style="width:100%;text-align:center;line-height:1.8;">

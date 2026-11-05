@@ -258,6 +258,7 @@ let _siSolveGen=0,_siInspectorGen=0,_siInspectorSignature=null;
 let _siSolveSeq=0;
 const _siSolveQueue=[];
 const _siSolveBusy=new Map();
+const SOLVER_CANCELLED='SOLVER_CANCELLED';
 function takeIdlePoolWorker(){
 const p=_dq9Pool;
 if(!p||p.idle.length===0)return-1;
@@ -453,7 +454,6 @@ const a=_dq9Active;
 if(a&&!a.finished&&a._retryJob)w.postMessage({type:'job',gen:a.gen,job:a._retryJob});
 if(p.idle.indexOf(wi)===-1)p.idle.push(wi);
 }
-const SOLVER_CANCELLED='SOLVER_CANCELLED';
 function makeSolverCancellationError(reason){
 const err=new Error(reason||'Solver cancelled');
 err.code=SOLVER_CANCELLED;
@@ -622,7 +622,7 @@ el.textContent=text;
 });
 for(const[id,label]of Object.entries(OG)){const el=byId(id);if(el)el.label=label;}
 const sl=byId('at_lblSteps');if(sl)sl.textContent=H05;
-if(typeof updateFSItems==='function'){for(let i=1;i<=3;i++)updateFSItems(i);}
+if(typeof updateFSItems==='function'){for(let i=1;i<=3;i++)updateFSItems(i,true);}
 ['at_pattern','si_pattern'].forEach(sid=>{
 const sel=byId(sid);
 if(sel){
@@ -635,6 +635,10 @@ sel.value=cv;
 const sel=byId(sid);
 if(sel)sel.querySelectorAll('option').forEach((o,i)=>{if(ENV_OPTS[i])o.textContent=ENV_OPTS[i];});
 });
+for(const id of['si_sup1','si_sup2']){
+const sel=byId(id);
+if(sel)for(const o of sel.options)if(MONSTER_DB[o.value])o.textContent=getMonsterShieldName(o.value);
+}
 for(let b=1;b<=4;b++){const sel=byId('si_job'+b);if(sel)sel.querySelectorAll('option').forEach(o=>{const v=parseInt(o.value);if(!isNaN(v)&&VOC_STATS[v])o.textContent=DISPLAY_LANG==='EN'?VOC_STATS[v].en:VOC_STATS[v].jp;});}
 initSolverStatInputs();
 }
@@ -649,9 +653,6 @@ else{b.style.background='#224';b.style.color='#888';b.style.borderColor='#444';}
 const mm=byId('marathonModal');
 if(mm){mrtLang=lang==='EN'?'en':'jp';const bl=byId('mrt_btnLang');if(bl)bl.textContent=mrtLang.toUpperCase();if(mm.classList.contains('open')){mrtBuildTable();mrtRenderRows();}}
 if(mapData&&mapData.floorCount>0){
-const cc=byId('controls_container');
-const sc=byId('single_map_controls');
-if(cc&&sc)cc.appendChild(sc);
 renderResult();
 }
 }
@@ -723,9 +724,10 @@ byId('searchResults').innerHTML=`<div style="color:#aaa;font-size:13px;margin-bo
 return{grid:byId('searchGrid'),progressSpan:byId('searchProgress')};
 }
 function setStopButton(btn,stopText){
-const text=btn.textContent,bg=btn.style.background,color=btn.style.color;
+const text=btn.textContent,bg=btn.style.background,color=btn.style.color,onclick=btn.onclick;
 btn.textContent=stopText;btn.style.background='#f44';btn.style.color='#fff';
-return()=>{btn.textContent=text;btn.style.background=bg;btn.style.color=color;};
+btn.onclick=requestSearchCancel;
+return()=>{btn.textContent=text;btn.style.background=bg;btn.style.color=color;btn.onclick=onclick;};
 }
 function showConditionConflictResult(){
 if(!byId('searchResults'))return;
@@ -834,6 +836,7 @@ const restoreBtn=()=>{if(btn){restoreStyle();btn.textContent=config.btnText;}};
 let ranksToSearch=readRanksToSearch();
 if(config.filterRanks){ranksToSearch=config.filterRanks(ranksToSearch,conds);}
 const{grid,progressSpan}=initSearchResultArea();
+if(config.processor==='item')grid.dataset.searchItem=uiVal('searchItem');
 if(ranksToSearch.length===0){
 progressSpan.textContent="100% ("+(config.emptyRankMsg||B08)+")";
 isSearching=false;
@@ -1369,7 +1372,6 @@ function atinit(){
 atUpd();
 const patSel=byId('at_pattern');
 if(patSel)appendPatternOptions(patSel);
-dwInit();
 }
 function getMonsterNameByAT(atVal,envType,floorMR,id=getMonsterIdByAT(atVal,envType,floorMR)){
 return id!==null&&MONSTER_DB[id]?getMonsterDisplayName(id):"?";
@@ -1633,7 +1635,7 @@ if(sSel&&sSel.value)byId('mrt_inSeed').value=sSel.value;
 mrtInputChange();
 mrtResizeMain();
 }
-function mrtClose(){mrtResetTimer();byId('marathonModal').classList.remove('open');}
+function mrtClose(){clearTimeout(mrtInputTimer);mrtInputTimer=null;mrtResetTimer();byId('marathonModal').classList.remove('open');}
 function mrtResizeMain(){
 const tb=document.querySelector('#marathonModal .mrt-topbar');
 const ma=byId('mrt_mainArea');
@@ -1771,6 +1773,7 @@ mrtBuildTable();mrtRenderRows();
 function mrtApplyPreset(){
 const sel=byId('mrt_presets');
 if(!sel.value)return;
+clearTimeout(mrtInputTimer);mrtInputTimer=null;
 const[rank,seed]=sel.value.split(',');
 byId('mrt_inRank').value=rank;
 byId('mrt_inSeed').value=seed;
@@ -1780,13 +1783,16 @@ mrtHiddenChests.clear();
 mrtResetTimer(false);mrtCompute();
 }
 function mrtInputChange(){
+clearTimeout(mrtInputTimer);mrtInputTimer=null;
+byId('mrt_presets').value='';
 const seedVal=uiVal('mrt_inSeed').trim();
 if(seedVal.length<1||/[^0-9A-Fa-f]/.test(seedVal))return;
 mrtCustom=null;mrtFilter='ALL';mrtHiddenChests.clear();
 mrtMarkFilter('ALL');
 mrtResetTimer(false);mrtCompute();
 }
-const debouncedMrtInput=debounce(mrtInputChange,200);
+let mrtInputTimer=null;
+const debouncedMrtInput=()=>{clearTimeout(mrtInputTimer);mrtInputTimer=setTimeout(mrtInputChange,200);};
 const MRT_CUSTOM_HL1={bg:'#801',fg:'#fff'};
 const MRT_CUSTOM_HL2={bg:'#3f48cc',fg:'#fff'};
 let mrtCustomHL1Item='',mrtCustomHL2Item='';
@@ -1877,7 +1883,7 @@ const target=byId('si_target_results');if(target)target.innerHTML='';
 const modalBody=byId('si_submodal_body');if(modalBody)modalBody.textContent=e.message;
 return;
 }
-const seedHex=uiVal('si_seed').trim()||'0000';
+const seedHex=uiVal('si_seed').trim();
 const seed=parseInt(seedHex,16);
 const envType=parseInt(uiVal('si_env'));
 const floorMR=parseInt(uiVal('si_mr'));
@@ -1886,13 +1892,16 @@ const n=parseInt(uiVal('si_n'))||0;
 let groupSize=parseInt(uiVal('si_group_size'))||1;
 const supSel1=byId('si_sup1');
 const supSel2=byId('si_sup2');
-const supPool=dwSupPool(envType,floorMR);
+const supPool=[];
+forEachPoolEntry(GROTTO_SUPPORT[envType]&&GROTTO_SUPPORT[envType][floorMR]||[],e=>{
+if(!supPool.includes(e[0]))supPool.push(e[0]);
+});
+const supKey=envType+':'+floorMR;
 [supSel1,supSel2].forEach(sel=>{
-const cur=sel.value;
-if(sel.options.length!==supPool.length||(supPool.length>0&&sel.options[0].value!==supPool[0])){
+if(sel.dataset.poolKey!==supKey||sel.options.length!==supPool.length||supPool.some((hx,i)=>sel.options[i].value!==hx)){
 sel.innerHTML='';
 for(const hx of supPool){sel.options.add(new Option(getMonsterShieldName(hx),hx));}
-sel.value=cur;
+sel.dataset.poolKey=supKey;
 }
 });
 const tLvs=[
@@ -1906,7 +1915,13 @@ const targetTotalStep=parseInt(uiVal('si_target_step'))||35;
 const pSelect=byId('si_pattern');
 const pTypeStr=pSelect.value;
 const pType=AT_PAT[pTypeStr]||0;
-if(isNaN(seed)){_siInspectorSignature=null;cancelAllSolveTasks('Invalid Inspector seed');return;}
+if(!/^[0-9A-Fa-f]{1,4}$/.test(seedHex)){
+_siInspectorSignature=null;
+closeSolverBucket();
+byId('si_at_results').innerHTML='<div style="color:#f44;">'+C17+'</div>';
+byId('si_target_results').innerHTML='';
+return;
+}
 const N=atPopIndex(n);
 const{atN:atN_val,atN1:atN1_val}=getATPair(seed,N);
 const monId=getMonsterIdByAT(atN_val,envType,floorMR);
@@ -2087,6 +2102,36 @@ function closeSeedInspector(e){
 if(!e||e.target.className==='modal-close'){_siInspectorSignature=null;cancelAllSolveTasks('Seed Inspector closed');byId('seedInspectorModal').style.display='none';}
 }
 const debouncedUpdateSeedInspector=debounce(updateSeedInspector,100);
+document.addEventListener('input',e=>{if(e.target.classList.contains('sv-stat'))debouncedUpdateSeedInspector();});
+window._solverComboMap={};
+window._solverComboId=0;
+window._solverBucketId=0;
+const SOLVER_RESULT_CACHE_MAX=192;
+const _solverResultCache=new Map();
+const _solverResultPending=new Map();
+window._solverResultCacheStats={hits:0,pendingHits:0,misses:0};
+const solverCharsSig=(chars)=>(chars||[]).map(c=>{
+const s=c.stats||{};
+return[c.slot,c.lv,c.job,c.agi,s.atkOverride,s.might,s.str,s.mending,s.deft].join(',');
+}).join(';');
+const snapshotSolverOptions=()=>({
+chars:readCharStatsFromDom(),
+useStats:solverUseStatsEnabled(),
+multiPlayer:solverMultiPlayerEnabled()
+});
+const _fleeVerdict=new Map();
+const _fleePending=new Map();
+const FLEE_ID_BASE=900000,FLEE_BK_BASE=9000;
+let _fleeProbeSeq=0;
+const fleeVerdictKey=solverResultCacheKey;
+const makeD1SolveTask=(b)=>b.singleEncounter?({
+bat:b.d1,
+monGroups:b.singleEncounter.monGroups,
+monId:b.monId,
+mapDeft:b.mapDeft,
+userDeft:b.userDeft,
+canRound2:b.canRound2
+}):null;
 function buildSolverLegendHtml(){
 const L=DISPLAY_LANG;
 const legends=[
@@ -2124,10 +2169,6 @@ if(!job)return;
 for(const field of SOLVER_STAT_FIELDS.filter(f=>!f.solverOnly)){const el=byId('si_'+field.dom+charNum);if(el)el.value=job.s[field.preset];}
 updateSeedInspector();
 }
-document.addEventListener('input',e=>{if(e.target.classList.contains('sv-stat'))debouncedUpdateSeedInspector();});
-window._solverComboMap={};
-window._solverComboId=0;
-window._solverBucketId=0;
 async function showBlockFallback(bucketId){
 const st=window._solverBuckets&&window._solverBuckets[bucketId];
 if(!st||!st.blocked)return;
@@ -2242,30 +2283,29 @@ const kind=SolverActionGate.targetKind(lookupSkill(a.jp)),hits=SolverActionGate.
 const mul=(eggAssign==null?void 0:eggAssign[ci])||1,metalOnly=row.targets.every(t=>isMetalHex(t.hex));
 const mulStr=mul>1?'<span style="color:#ff0;">×'+mul+
 (metalOnly?'':'＋'+tensionFlat(mul,(char==null?void 0:char.lv)||99))+'</span>':'';
-const count=(kind==='A'||kind==='G')?' · '+T('Hits per enemy','每隻擊數','1体あたりの攻撃回数')+' '+hits+
-' · '+T('Targets hit','命中')+' '+row.targets.length+' '+T('enemies','隻','体'):' · '+L65+' '+hits;
+let count=' · '+L65+' '+hits;
+if(kind==='A'||kind==='G'){
+count=' · '+T('Hits per enemy','每隻擊數','1体あたりの攻撃回数')+' '+hits;
+if(Number.isInteger(row.hitCount)){
+count+=' · '+SOLVER_HIT_LABEL.hit+row.hitCount+SOLVER_HIT_LABEL.unit;
+if(row.hitCount!==row.targets.length)count+=' / '+SOLVER_HIT_LABEL.target+row.targets.length+SOLVER_HIT_LABEL.unit;
+}else count+=' · '+SOLVER_HIT_LABEL.target+row.targets.length+SOLVER_HIT_LABEL.unit;
+}
 const detail=row.targets.map(t=>{
 const ko=t.outcome==='ko',possible=t.outcome==='possible';
 const before={hp:t.hpBefore,hpLow:t.hpLowBefore};
-return names[t.index]+': '+hpRange(before)+'→<span style="color:'+
+return names[t.index]+(t.miss?' '+SOLVER_MISS_LABEL.all:'')+': '+hpRange(before)+'→<span style="color:'+
 (ko?'#f44':possible?'#f80':'#8f8')+';">'+Math.max(0,t.hpLow)+'~'+Math.max(0,t.hp)+
 '</span>'+(ko?L32:possible?L33:'');
 }).join(' / ');
-html+=lead+'<span style="color:#ccc;">'+sn(a)+(row.miss?' 💨':'')+'</span>'+mulStr+' ['+kind+']'+atStr+count+' → '+
+const miss=row.miss?SOLVER_MISS_LABEL.all:row.partialMiss?SOLVER_MISS_LABEL.partial:'';
+html+=lead+'<span style="color:#ccc;">'+sn(a)+(miss?' '+miss:'')+'</span>'+mulStr+' ['+kind+']'+atStr+count+' → '+
 detail+L27+remainingText(row.remaining)+'</div>';
 }
 if((defend==null?void 0:defend.length))html+='<div style="color:#789;margin-top:1px;">'+L34+
 defend.map(i=>charLabel(chars[i])).join(', ')+'</div>';
 return html+renderSolverPlanVariantRows(data)+'</div>';
 }
-const SOLVER_RESULT_CACHE_MAX=192;
-const _solverResultCache=new Map();
-const _solverResultPending=new Map();
-window._solverResultCacheStats={hits:0,pendingHits:0,misses:0};
-const solverCharsSig=(chars)=>(chars||[]).map(c=>{
-const s=c.stats||{};
-return[c.slot,c.lv,c.job,c.agi,s.atkOverride,s.might,s.str,s.mending,s.deft].join(',');
-}).join(';');
 function solverResultCacheKey(render,options){
 const canRound2=solverAllowsRound2(render.mapDeft,render.canRound2);
 const charSig=options.useStats?solverCharsSig(options.chars):'neutral';
@@ -2308,16 +2348,6 @@ while(_solverResultCache.size>SOLVER_RESULT_CACHE_MAX)
 _solverResultCache.delete(_solverResultCache.keys().next().value);
 return _solverResultCache.get(key);
 }
-const snapshotSolverOptions=()=>({
-chars:readCharStatsFromDom(),
-useStats:solverUseStatsEnabled(),
-multiPlayer:solverMultiPlayerEnabled()
-});
-const _fleeVerdict=new Map();
-const _fleePending=new Map();
-const FLEE_ID_BASE=900000,FLEE_BK_BASE=9000;
-let _fleeProbeSeq=0;
-const fleeVerdictKey=solverResultCacheKey;
 function solverResultVerdict(result){
 if(!result||result.needsKillAll||result.needsBlockFallback||typeof result.solvable!=='boolean')return null;
 return result.solvable;
@@ -2349,14 +2379,6 @@ if(_fleePending.get(k)===p)_fleePending.delete(k);
 _fleePending.set(k,p);
 return p;
 }
-const makeD1SolveTask=(b)=>b.singleEncounter?({
-bat:b.d1,
-monGroups:b.singleEncounter.monGroups,
-monId:b.monId,
-mapDeft:b.mapDeft,
-userDeft:b.userDeft,
-canRound2:b.canRound2
-}):null;
 function ensureSolverSubmodal(){
 if(byId('si_submodal'))return;
 const ov=document.createElement('div');

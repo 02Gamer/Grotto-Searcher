@@ -11,14 +11,12 @@ const WALL_COLOR='#000';
 let mapData=null;
 let activeFloor=0;
 function calculate(){
-const safeZone=byId('controls_container');
-const controlsDiv=byId('single_map_controls');
-if(safeZone&&controlsDiv){safeZone.appendChild(controlsDiv);}
 const seedStr=uiVal('seed').trim();
 const seed=parseInt(seedStr,16);
 const rank=parseInt(uiVal('rank'));
 if(isNaN(seed)||seed<0||seed>0x7FFF||!/^[0-9a-fA-F]{1,4}$/.test(seedStr)){
-byId('result').innerHTML='<div class="error">'+C17+'</div>';
+mapData=null;
+renderResult(C17);
 return;
 }
 mapData=new GrottoDetail();
@@ -33,10 +31,16 @@ const slots=Array.from({length:5},(_,bk)=>({gIdx:0,bk,rareThreshold:dropATThresh
 const first=key=>{const r=scanDropPatternStarts(seed,key,slots,1,400,1)[0];return r?r.start:-1;};
 return{r2:first('R2'),r2_3:first('R2_3'),n2:first('N2')};
 }
-function renderResult(){
-const el=byId('result');
-if(!mapData||mapData.floorCount===0){
-el.innerHTML='<div class="error">'+C18+'</div>';
+function renderResult(errorMessage=C18){
+const el=byId('map_summary');
+const hasMap=!!(mapData&&mapData.floorCount>0);
+byId('map_box_label').textContent=hasMap?C08:'';
+for(const id of['map_box_label','map_box_total'])byId(id).style.display=hasMap?'':'none';
+if(!hasMap){
+el.innerHTML='<div class="error">'+errorMessage+'</div>';
+byId('map_box_counts').innerHTML='';
+byId('map_box_total').textContent='';
+byId('map_floors').innerHTML='';
 return;
 }
 const seedHex=hex4(mapData.MapSeed);
@@ -88,21 +92,11 @@ ${col(C06,'color:#4c4;','text-align:left;',atHtmlString)}
 ${col(C07,'','text-align:left;',rnHtml)}
 ${col('A*','','text-align:left;',wHtml)}
 </div>
-
-<div class="info-bar" style="align-items:center;background:#16162a;border-bottom:1px solid #4a4a8a;padding:8px 14px;gap:6px;">
-<span style="color:#88b;font-weight:bold;white-space:nowrap;">${C08}</span>
-<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1;min-width:0;">
-${boxString}
-</div>
-<span style="white-space:nowrap;padding-left:8px;border-left:2px solid #4a4a8a;color:#8cc8ff;font-weight:bold;">📦 ${totalBoxes}</span>
-<div id="controls_target_area" style="display:flex;align-items:center;"></div>
-</div>`;
-setTimeout(()=>{
-const target=byId('controls_target_area');
-const controls=byId('single_map_controls');
-if(target&&controls)target.appendChild(controls);
-},0);
-html+='<div class="floor-tabs">';
+`;
+el.innerHTML=html;
+byId('map_box_counts').innerHTML=boxString;
+byId('map_box_total').textContent=`📦 ${totalBoxes}`;
+html='<div class="floor-tabs">';
 const ELIST_TAB_COLORS={none:'#c0c0c0',only:'#FFC90E',reduced:'#B5E61D',partial:'#00A2E8'};
 for(let i=0;i<mapData.floorCount;i++){
 let tabStyle='';
@@ -115,7 +109,7 @@ html+=`<div class="floor-tab${i===activeFloor?' active':''}"${tabStyle} onclick=
 }
 html+='</div>';
 html+='<div class="floor-content" id="floor-content"></div>';
-el.innerHTML=html;
+byId('map_floors').innerHTML=html;
 renderFloor(activeFloor);
 }
 function switchFloor(f){
@@ -495,6 +489,8 @@ html+=`<div style="font-size:11px;margin-bottom:2px"><span style="color:#0ca">${
 }
 out.innerHTML=html;
 }
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',dwInit);
+else setTimeout(dwInit,0);
 const MODAL_TAB_KEYS=['TW','EN','JP','SP'];
 const MODAL_THEMES={
 gold:['#ffd700','#4a4a8a','#224','#888','#333'],
@@ -641,11 +637,11 @@ let boxOpts=`
 `;
 let rankOpts=`<option value="0">---</option>`;
 for(let r=10;r>=1;r--)rankOpts+=`<option value="${r}">${CHEST_RANK[r]}</option>`;
-window.updateFSItems=function(groupId){
+window.updateFSItems=function(groupId,preserveSelection=false){
 let rankSelect=byId(`fs_r_${groupId}`);
 let itemSelect=byId(`fs_i_${groupId}`);
 if(!rankSelect||!itemSelect)return;
-let currentVal=itemSelect.value;
+let currentVal=preserveSelection?itemSelect.value:"ANY";
 let r=parseInt(rankSelect.value);
 let itemOpts=`<option value="ANY">---</option>`;
 let seen=new Set();
@@ -672,10 +668,11 @@ if(!seen.has(itemName)){seen.add(itemName);validItems.push(itemName);}
 }
 validItems.forEach(en=>{itemOpts+=`<option value="${en}">${getDispItem(en)}</option>`;});
 itemSelect.innerHTML=itemOpts;
-itemSelect.value=itemSelect.querySelector(`option[value="${currentVal}"]`)?currentVal:"ANY";
+itemSelect.value=[...itemSelect.options].some(o=>!o.disabled&&o.value===currentVal)?currentVal:"ANY";
 };
+let rows='';
 for(let i=1;i<=3;i++){
-container.innerHTML+=`
+rows+=`
 <div style="display:flex;gap:2px;align-items:center;">
 <span style="color:#0ff;font-size:10px;width:10px;text-align:center;">${i}</span>
 <select id="fs_f_${i}" class="fs-ctl" style="width:45px;">${floorOpts}</select>
@@ -685,6 +682,7 @@ container.innerHTML+=`
 <input type="number" id="fs_t_${i}" value="7" min="5" placeholder="sec" class="fs-ctl" style="width:35px;text-align:center;">
 </div>`;
 }
+container.innerHTML=rows;
 for(let i=1;i<=3;i++){
 updateFSItems(i);
 }
@@ -767,8 +765,8 @@ if(rankMatch)rank=rankMatch[1].toUpperCase();
 let resultLines=lines.slice(1).filter(keepLine);
 let resultText=resultLines.join(" / ");
 if(/^(B3F|B4F|B9F|B10F)\s+(Solo|Party|一人旅|即開)/i.test(resultText)||/^B\d+F\s+[⑤⑨]\s*x/.test(resultText)){
-const itemName=uiVal('searchItem');
-resultText=`${getDispItem(itemName)} ${resultText}`;
+const itemName=item.closest('#searchGrid, #atSearchGrid').dataset.searchItem;
+if(itemName)resultText=`${getDispItem(itemName)} ${resultText}`;
 }
 txtContent+=`${rank},${seed},${resultText}${item.dataset.hasD==="true"?",D":""}\n`;
 });
