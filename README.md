@@ -22,9 +22,11 @@ Ultimate search
 - Terrain Type, SMR (B1 Monster Rank), Depth, Boss
 - Location, Base Quality
 - Chest amount in each Chest rank
+- Nipple Map (inaccessible chest), Chamber Map (inaccessible area), Softlock, etc.
+- Fastest Map Search (from entrance to Boss floor)
+- Fastest Floor Search (from entrance to Specified/Bugged floor)
 - Wandering Monster bugged floor status (ElistOfs)
-- Single monster floor (Only)
-- Nipple Map (inaccessible chest), Chamber Map (inaccessible area), Softlock, Fastest Map Search, etc.
+- Single monster floor (Only Monsters)
 - 4-player Multiplay Bug (Multibug)
 - CPU Benchmark (💻)
 
@@ -32,14 +34,14 @@ Chest Timer related search
 - Quickload B3/B4/B9 same item x2 (QL)
 - Quickload + 3rd Chest same item (Combo)
 - 3rd Chest same item x2 (3rd)
-- (New!) Dropdown List: PPAP(5s,9s) & Fast Quickload/PPAP Map Search support
-- Chest free search (up to 3 chests)
-- Chest Timer Marathon Tool (support both Japanese and English)
+- (New!) Dropdown List: PPAP(5s,9s) & Fastest Chest-map Search (D/5D/9D) support
+- Free Search (up to 3 chests)
+- Chest Timer Marathon Tool (supports both Japanese and English)
 
 Map Method (AT) search
-- AT search (1) List all map Seeds of selected item drop pattern
-- AT search (2) List all map Seeds for specific Whistle-summoned monster
-- AT search (Detail) Enter map Seed to check details, Map Method Skill Combo Solver for Battle (WIP)
+- AT search (AT) List all map Seeds of selected item drop pattern
+- AT search (M) List all map Seeds for specific Whistle-summoned monster
+- AT search (Detail) Enter map Seed to calculate Battle Skill Combo (Solver) for Map Method Item Drop (WIP)
 
 # In-tool Documents
 
@@ -85,13 +87,14 @@ CPU Benchmark (2026.06.30 renewal)
 
 全般
 - URLの後に「?id=RRSSSS」を付けば、特定の地図を表示できる
-- 例えば https://dqix.github.io/Grotto-Searcher/?id=B50E5C で「見えざる魔神の地図Lv87」を直接に表示可能
+- 例えば https://dqix.github.io/Grotto-Searcher/?id=B50E5C で「見えざる魔神の地図Lv87(通称:まさゆきの地図)」を直接に表示可能
 
 Ultimate search
 - 地図名、Lv、地形、敵ランク (B1F)、深さ (階層数)、BOSS、各ランクの宝箱の数
 - 場所コード (全150種、暗記推奨)、Base値
+- 乳首地図、イケない通路、危険？ハマるフロア など
+- マス目検索 (最短地図、最短フロア(オンリー最短はコレ)など)
 - 特殊フロア (敵無、敵減、オンリーなど)、特定モンスターのオンリー
-- 乳首地図、イケない通路、危険？ハマるフロア、最短地図 など
 - 4人マルチによるバグ (マルチバグ)
 - CPUベンチマーク (💻)
 
@@ -100,5 +103,10 @@ Ultimate search
 - 「即開→整列箱」の体感 同じアイテムx2 (体感)
 - 隣接フロアの整列箱 同じアイテムx2 (整列箱)
 - (New!) PPAP (5s,9s)・最短検索対応
-- フリー検索 (3つの宝箱まで)
+- Free Search (3つの宝箱まで)
 - マラソンツール (日本語・英語両対応)
+
+地図法 (AT) 検索
+- パターン別 (AT) 全 Seed 検索
+- パターン別＋モンスター別 (M) 全 Seed 検索
+- 戦闘手順検索 (DETAIL) (工事中)
