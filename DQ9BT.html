@@ -15,16 +15,22 @@
       --warn: #dc2626;
       --text: #14532d;
       --text-dim: #6b7280;
-      --pass: #16a34a;
-      --fail: #d1d5db;
-      --mono: 'Courier New', monospace;
+      --pass: var(--accent);
+      --muted: #9ca3af;
+      --rare: #c018a0;   --rare-dk: #a01486;   --frame-bg: #fdeef9;
+      --normal: #22B14C; --normal-dk: #1b8e3d;
+      /* 字型（只用本機字型）：介面拉丁字 Century Gothic、輸入與數據區拉丁字 Book Antiqua，漢字假名依語言 */
+      --cjk: 'Noto Serif SC';
+      --ui: 'Century Gothic', var(--cjk), sans-serif;
+      --data: 'Book Antiqua', var(--cjk), sans-serif;
     }
+    :root:lang(ja) { --cjk: 'UD Digi Kyokasho NP'; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       -webkit-text-size-adjust: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: var(--ui);
       font-size: 14px;
       padding: 20px;
       max-width: 780px;
@@ -69,11 +75,9 @@
     .field { display: flex; flex-direction: column; gap: 4px; position: relative; }
     .field label { font-size: .75em; color: var(--text-dim); }
     .seed-hint { font-size: .75em; margin-top: 3px; color: var(--text-dim); }
-    /* 同一列裡三種控制項等高，上下緣才對得齊 */
-    .row input, .row select, .row button { height: 36px; }
-    /* 寬螢幕欄位並排時，提示文字不能進入版面流 —— 否則會把輸入框整個往上頂一行。
-       改成絕對定位掛在欄位下方，並由 .has-hint 幫那一列預留空間。
-       窄螢幕欄位是上下堆疊的，沒有這個問題，維持一般流排版即可。 */
+    /* 同一列控制項等高（button 本身已是 36px） */
+    .row input, .row select { height: 36px; }
+    /* 寬螢幕：提示文字絕對定位掛在欄位下方，不把輸入框往上頂；.has-hint 預留空間 */
     @media (min-width: 601px) {
       .seed-hint { position: absolute; top: 100%; left: 0; margin-top: 2px; white-space: nowrap; }
       .row.has-hint { margin-bottom: 28px; }
@@ -85,7 +89,7 @@
       border-radius: 5px;
       padding: 7px 10px;
       font-size: .9em;
-      font-family: var(--mono);
+      font-family: var(--data);
       outline: none;
       transition: border-color .15s;
     }
@@ -101,6 +105,7 @@
       border-radius: 5px;
       padding: 8px 18px;
       cursor: pointer;
+      font-family: inherit;
       font-size: .9em;
       font-weight: 600;
       transition: opacity .15s;
@@ -110,12 +115,11 @@
     button.sec { background: #fff; color: var(--text); border: 1px solid var(--border); }
     .result-box {
       background: var(--surface2);
-      border-color: var(--border);
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 12px 14px;
       margin-top: 12px;
-      font-family: var(--mono);
+      font-family: var(--data);
       font-size: .95em;
       min-height: 42px;
       white-space: pre-wrap;
@@ -125,9 +129,9 @@
     .ok   { color: var(--pass); font-weight: bold; }
     .bad  { color: var(--warn); font-weight: bold; }
     .dim  { color: var(--text-dim); }
-    .hi   { color: #15803d; font-weight: bold; }
+    .hi   { color: var(--accent2); font-weight: bold; }
     .note {
-      background: #f0fdf4;
+      background: var(--surface2);
       border-left: 3px solid var(--accent);
       border-radius: 0 5px 5px 0;
       padding: 8px 12px;
@@ -138,16 +142,12 @@
     /* Trace grid */
     .trace-grid {
       display: grid;
-      grid-template-columns: repeat(10, 1fr);
       --tc-gap: 4px;              /* 連框的跨隙連接條寬度也吃這個值 */
       gap: var(--tc-gap);
       margin-top: 10px;
     }
-    @media (max-width: 600px) {
-      .trace-grid { grid-template-columns: repeat(5, 1fr); }
-    }
     .trace-cell {
-      background: #f0fdf4;
+      background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 4px;
       height: 41px;           /* 字放大但方格尺寸維持原樣 */
@@ -156,7 +156,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: var(--mono);
+      font-family: var(--data);
       font-size: .85em;
       line-height: 1.3;
       text-align: center;
@@ -171,55 +171,56 @@
     .trace-cell.used { background: #f5f6f7; border-color: #e6e8ea; color: #b9bfc6; }
     .trace-cell.used .tc-idx { color: #ced3d8; }
 
-    /* 連框：點方格框住 N 起算的連續格子，長度 = Boss 戰按鈕的步數 */
-    .trace-cell.tri { background: #fdeef9; border-color: #c018a0; color: #a01486; font-weight: 700; position: relative; z-index: 1; }
+    /* 連框：框住判定窗的連續格子 */
+    .trace-cell.tri { background: var(--frame-bg); border-color: var(--rare); color: var(--rare-dk); font-weight: 700; position: relative; z-index: 1; }
     .trace-cell.tri .tc-idx { color: #c76fb8; }
     .trace-cell.tri.tri-jn { border-right-color: transparent; border-top-right-radius: 0; border-bottom-right-radius: 0; }
     .trace-cell.tri.tri-jp { border-left-color: transparent;  border-top-left-radius: 0;  border-bottom-left-radius: 0; }
     /* 跨越 grid gap 的連接條，讓三格看起來是同一個框 */
     .trace-cell.tri.tri-jn::after {
       content: ''; position: absolute; top: -1px; bottom: -1px; left: 100%; width: var(--tc-gap);
-      background: #fdeef9; border-top: 1px solid #c018a0; border-bottom: 1px solid #c018a0;
+      background: var(--frame-bg); border-top: 1px solid var(--rare); border-bottom: 1px solid var(--rare);
     }
-    /* 連框內命中掉寶：稀有 A/C/E/G/I、普通 B/D/F/H/J */
-    .trace-cell.hit-rare   { background: #c018a0; border-color: #a01486; color: #fff; }
-    .trace-cell.hit-normal { background: #22B14C; border-color: #1b8e3d; color: #fff; }
-    .trace-cell.hit-rare .tc-idx,
-    .trace-cell.hit-normal .tc-idx { color: rgba(255,255,255,.88); }
+    /* 命中格：.hit 管共通的白字，色類只管底色 */
+    .trace-cell.hit          { color: #fff; }
+    .trace-cell.hit .tc-idx  { color: rgba(255,255,255,.88); }
+    .trace-cell.hit-rare   { background: var(--rare);   border-color: var(--rare-dk); }
+    .trace-cell.hit-normal { background: var(--normal); border-color: var(--normal-dk); }
+    /* 逃跑的三段門檻各一色，越早逃掉越好 */
+    .trace-cell.hit-flee1  { background: #1863c6; border-color: #124a96; }
+    .trace-cell.hit-flee2  { background: #0e9488; border-color: #0a6b62; }
+    .trace-cell.hit-flee3  { background: #d97706; border-color: #a85c05; }
 
     /* 下一步游標：只加外環，不換底色，才能疊在 used / tri 上面 */
     .trace-cell.next { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--accent2); font-weight: 700; position: relative; z-index: 2; }
     .trace-cell.next .tc-idx { color: var(--accent); }
     /* 游標剛好落在命中格上：只保留外環，文字維持白色才看得清楚 */
-    .trace-cell.next.hit-rare,
-    .trace-cell.next.hit-normal { color: #fff; }
-    .trace-cell.next.hit-rare .tc-idx,
-    .trace-cell.next.hit-normal .tc-idx { color: rgba(255,255,255,.88); }
+    .trace-cell.next.hit { color: #fff; }
+    .trace-cell.next.hit .tc-idx { color: rgba(255,255,255,.88); }
 
     .tri-info { font-size: .9em; margin-bottom: 8px; }
 
     /* Drop grid */
     .drop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
     .drop-cell {
-      background: #f0fdf4;
+      background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 4px;
       padding: 8px 8px;
-      font-family: var(--mono);
+      font-family: var(--data);
       font-size: 1.05em;
       font-weight: 600;
       text-align: center;
     }
     .drop-cell .slot-name { font-size: .78em; font-weight: 400; color: var(--text-dim); margin-bottom: 2px; }
     .drop-cell.c-pass     { border-color: var(--pass); color: var(--pass); }
-    .drop-cell.c-fail     { color: #9ca3af; }
-    .drop-cell.c-neutral  { color: #9ca3af; }  /* 未通過或不限：同預設淺綠框 */
-    .drop-cell.c-x        { color: #9ca3af; font-style: italic; }
+    .drop-cell.c-neutral  { color: var(--muted); }
+    .drop-cell.c-x        { color: var(--muted); font-style: italic; }
     .drop-cell.c-overflow { border-color: var(--warn); color: var(--warn); }
 
     /* 稀有掉寶 (A/C/E/G/I) 與 普通掉寶 (B/D/F/H/J) 底色 */
-    .drop-cell.k-rare   { background: #c018a0; border-color: #a01486; color: #fff; }
-    .drop-cell.k-normal { background: #22B14C; border-color: #1b8e3d; color: #fff; }
+    .drop-cell.k-rare   { background: var(--rare);   border-color: var(--rare-dk);   color: #fff; }
+    .drop-cell.k-normal { background: var(--normal); border-color: var(--normal-dk); color: #fff; }
     .drop-cell.k-rare .slot-name,
     .drop-cell.k-normal .slot-name { color: rgba(255,255,255,.88); }
     /* 未計入（未通過／不限）：同色系淡底 */
@@ -227,7 +228,7 @@
     .drop-cell.k-normal.c-neutral { background: #e4f6ea; border-color: #b9e3c7; color: #6aa584; }
     .drop-cell.k-rare.c-neutral .slot-name   { color: #c085b6; }
     .drop-cell.k-normal.c-neutral .slot-name { color: #8ac0a1; }
-    /* 超過 8 個上限：保留紅框警示 */
+    /* 超過掉寶上限：紅框警示 */
     .drop-cell.k-rare.c-overflow,
     .drop-cell.k-normal.c-overflow { border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn); }
 
@@ -250,28 +251,45 @@
       width: 32px; height: 32px; padding: 0; border-radius: 5px; font-size: 1em; line-height: 1;
     }
     .modal-close:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
-    /* 控制列要對齊：input / select / button 三者等高，
-       且 seed 下方的平台提示不進入版面流（否則會把輸入框往上頂一整行）。
-       平台提示在 B-Table 面板仍然保留。 */
+    /* modal 控制項等高；平台提示只在 B-Table 面板顯示 */
     .modal-head input, .modal-head select, .modal-head button { height: 32px; }
     .modal-head #tr_seed_hint { display: none; }
+    /* 兩種判定模式各自的欄位，只顯示當前模式那組 */
+    .modal.mode-boss .mode-zako,
+    .modal.mode-zako .mode-boss { display: none; }
     .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 18px 24px; }
+
+    /* 說明彈窗：疊在全屏 modal 之上，點背景或 Esc 關閉 */
+    .info-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+    .info-link::after { content: ' ⓘ'; text-decoration: none; }
+    .info-modal {
+      position: fixed; inset: 0; z-index: 200; padding: 20px;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info-modal[hidden] { display: none; }
+    .info-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      width: 100%; max-width: 760px; max-height: 84vh; overflow-y: auto;
+      padding: 14px 18px 18px; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+    }
+    .info-table { width: 100%; border-collapse: collapse; font-size: .88em; }
+    .info-table th, .info-table td {
+      border-bottom: 1px solid var(--border); padding: 7px 8px;
+      text-align: left; vertical-align: top;
+    }
+    .info-table th { color: var(--text-dim); white-space: nowrap; }
+    .info-table td.ib-name { white-space: nowrap; font-weight: bold; }
+    .info-table td.ib-cost { white-space: nowrap; font-weight: bold; color: var(--accent); text-align: center; }
+    .info-note { font-size: .82em; color: var(--text-dim); margin-top: 10px; line-height: 1.6; }
+    /* 格子編號的定義跟舊工具不同，講清楚免得對錯位置 */
+    .tri-note { font-size: .82em; font-weight: bold; color: #8B4513; margin-top: 5px; line-height: 1.5; }
     .modal-body .result-box { margin-top: 0; }
     /* 全屏時讓格子填滿寬度，欄數隨視窗自動調整 */
     .modal .trace-grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
-    @media (max-width: 600px) {
-      .modal .trace-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
-      .modal-head { padding: 10px 12px 4px; }
-      .modal-body { padding: 10px 12px 20px; }
-    }
 
-    /* ══ iPhone / 窄螢幕適配 ══════════════════════════════════
-       放在樣式表最後，才不會被前面的 .modal 基礎規則蓋掉。
-       1. iOS Safari 對 font-size < 16px 的「會叫鍵盤」欄位，聚焦時會自動
-          放大整頁；select 開的是原生滾輪不會，所以只有 input 需要 16px。
-       2. 固定寬度在 375px 下會排得零碎，主面板改成一欄到底，
-          所有控制項共用同一個左邊界與寬度。
-       3. 留出瀏海與 Home 條的安全區域。 */
+    /* ══ 窄螢幕（iPhone）══ 須放在樣式表最後，否則被前面的 .modal 規則蓋掉。
+       input 須 16px，否則 iOS 聚焦時自動放大整頁；select 不會。留出瀏海與 Home 條安全區。 */
     @media (max-width: 600px) {
       body {
         padding: 12px;
@@ -287,22 +305,39 @@
       input  { font-size: 16px; }
       select { font-size: 14px; }
       input, select { padding: 5px 8px; max-width: 100%; }
-      input, select, button { height: 36px; }   /* 三者等高才對得齊 */
       button { padding: 6px 12px; }
 
-      /* 主面板：每個欄位獨佔一行，按鈕等寬排成一列 */
-      .panel .row > .field { flex: 1 1 100%; }
+      /* 主面板：選項兩個一行，長欄位（.field-wide）獨佔一行 */
+      .panel .row > .field { flex: 1 1 calc(50% - 4px); min-width: 0; }
+      .panel .row > .field-wide { flex-basis: 100%; }
       .panel .row > .field > input,
       .panel .row > .field > select { width: 100% !important; }
       .panel .row > button { flex: 1 1 auto; }
+
+      /* 次數欄 + 三個搜尋鈕同一行：按鈕貼合字數，剩下的寬度給次數欄 */
+      .panel .row.row-4up {
+        display: grid;
+        grid-template-columns: 1fr minmax(52px, auto) auto auto;
+        gap: 6px;
+        align-items: end;
+      }
+      .panel .row.row-4up > .field,
+      .panel .row.row-4up > button { min-width: 0; }
+      /* 內距收掉才放得下 6 位數 */
+      .panel .row.row-4up > .field > input {
+        width: 100% !important; padding: 5px 3px; text-align: center;
+      }
+      .panel .row.row-4up > .field > label { font-size: .62em; white-space: nowrap; }
+      .panel .row.row-4up > button {
+        font-size: 11px; padding: 4px 4px; white-space: nowrap;
+      }
 
       /* 掉寶格：3 欄固定，百分比有 7 位小數，字要縮到能一行放下 */
       .drop-grid { gap: 4px; }
       .drop-cell { font-size: 11px; padding: 6px 2px; white-space: nowrap; }
       .drop-cell .slot-name { font-size: .8em; }
 
-      /* ── RNG Trace 全屏 modal ──
-         垂直空間最珍貴，控制項要比主面板再緊兩級 */
+      /* RNG Trace modal：垂直空間最珍貴，比主面板再緊 */
       .modal-head {
         padding: 6px 10px 2px;
         padding-top: max(6px, env(safe-area-inset-top));
@@ -312,17 +347,23 @@
       .modal-bar  { margin-bottom: 4px; }
       .modal-bar .panel-title { font-size: .62em; }
       .modal-close { width: 26px; height: 26px; }
-      .modal-head .row { gap: 5px; margin-bottom: 4px; }
-      .modal-head .field { gap: 1px; }
-      .modal-head .field label { font-size: .62em; }
-      .modal-head input, .modal-head select, .modal-head button { height: 28px; }
+      .modal-head .row { gap: 5px; margin-bottom: 3px; }
+      .modal-head .field { gap: 0; }
+      .modal-head .field label { font-size: .58em; line-height: 1.25; }
+      .modal-head input, .modal-head select, .modal-head button { height: 26px; }
+      /* 說明區的行高直接吃掉可見格列，壓到剛好讀得清楚 */
+      .tri-info, .tri-note { font-size: .76em; line-height: 1.35; }
       .modal-head input  { font-size: 16px; padding: 2px 5px; }
       .modal-head select { font-size: 12px; padding: 2px 3px; }
       .modal-head button { font-size: .78em; padding: 3px 7px; }
       .modal-head select.narrow    { width: 58px; }
       .modal-head input.seed-input { width: 72px; }    /* 卡帶 seed 是 5 位 hex，夠用就好 */
-      .tri-info { font-size: .76em; margin-bottom: 3px; }
+      .tri-info { margin-bottom: 3px; }
       #tr_out.result-box { padding: 6px 6px; }
+      .info-modal { padding: 10px; }
+      .info-card  { padding: 10px 12px 14px; max-height: 88vh; }
+      .info-table { font-size: .8em; }
+      .info-table th, .info-table td { padding: 5px 4px; }
 
       /* 一行 5 格 */
       .modal .trace-grid { grid-template-columns: repeat(5, 1fr); --tc-gap: 3px; }
@@ -330,8 +371,7 @@
       .trace-cell .tc-idx { font-size: .74em; margin-bottom: 0; }
     }
 
-    /* 手機橫置（矮視窗）：寬度夠但高度很緊，控制列要壓扁。
-       這是高度條件，跟上面的寬度條件互補。 */
+    /* 手機橫置（矮視窗）：控制列壓扁 */
     @media (max-height: 500px) {
       .modal-head {
         padding: 5px 12px 2px;
@@ -369,7 +409,7 @@
 <div class="panel">
   <div class="panel-title" data-i18n="bt.title"></div>
   <div class="row has-hint">
-    <div class="field">
+    <div class="field field-wide">
       <label data-i18n="common.btSeedHex"></label>
       <input type="text" id="bt_seed" class="seed-input" placeholder="e.g. 32742" oninput="seedHint('bt_seed','bt_seed_hint')">
       <span id="bt_seed_hint" class="seed-hint">　</span>
@@ -395,10 +435,10 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row row-4up">
     <div class="field">
       <label data-i18n="bt.maxHoimi"></label>
-      <input type="number" id="bt_steps" value="100000" style="width:100px">
+      <input type="number" id="bt_steps" style="width:100px">
     </div>
     <button onclick="doBTSearch(false)" data-i18n="bt.search"></button>
     <button onclick="doBTSearch(true)" id="bt_next_btn" class="sec" data-i18n="bt.searchNext" disabled></button>
@@ -434,10 +474,14 @@
       <button onclick="doTrace(false)" style="align-self:flex-end" data-i18n="tr.expand"></button>
       <button onclick="doTrace(true)" id="tr_more_btn" class="sec" style="align-self:flex-end" data-i18n="tr.more" disabled></button>
       <div class="field">
+        <label data-i18n="tr.mode"></label>
+        <button onclick="toggleTraceMode()" id="tr_mode_btn" class="sec" data-i18n-title="tr.modeTitle"></button>
+      </div>
+      <div class="field mode-boss">
         <label data-i18n="tr.rarePct"></label>
         <select id="tr_rare" class="narrow" autocomplete="off" onchange="repaintTrace()"></select>
       </div>
-      <div class="field">
+      <div class="field mode-boss">
         <label data-i18n="tr.normalPct"></label>
         <select id="tr_normal" class="narrow" autocomplete="off" onchange="repaintTrace()"></select>
       </div>
@@ -446,23 +490,70 @@
       <!-- +1 / +4 / +8 由 TR_CASTS 產生（buildCastButtons） -->
       <div id="tr_casts" style="display:contents"></div>
       <div class="field">
-        <label data-i18n="tr.boss"></label>
-        <button onclick="advance(bookSteps())" id="tr_advbook" class="sec" data-i18n-title="tr.bossTitle" disabled>+3</button>
+        <label id="tr_frame_label"></label>
+        <button onclick="advance(triLen())" id="tr_advbook" class="sec" disabled>+3</button>
       </div>
-      <div class="field">
+      <div class="field mode-boss">
         <label data-i18n="tr.books"></label>
-        <select id="tr_books" class="narrow" autocomplete="off" onchange="bookHint()"></select>
+        <select id="tr_books" class="narrow" autocomplete="off" onchange="modeSync()"></select>
       </div>
       <div class="field">
         <label data-i18n="tr.undo"></label>
         <button onclick="undoAdvance()" id="tr_undo" class="sec" data-i18n-title="tr.undoTitle" disabled>⌫</button>
       </div>
     </div>
+    <!-- 雜魚戰的搜尋條件：一場戰鬥消耗幾格，全由這一列決定 -->
+    <div class="row mode-zako">
+      <div class="field">
+        <label data-i18n="zk.field"></label>
+        <select id="zk_field" class="narrow" autocomplete="off" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label data-i18n="zk.groups"></label>
+        <select id="zk_groups" class="narrow" autocomplete="off" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label data-i18n="zk.enemies"></label>
+        <select id="zk_enemies" class="narrow" autocomplete="off" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label data-i18n="zk.shigusa"></label>
+        <select id="zk_shigusa" class="narrow" autocomplete="off" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label><a class="info-link" onclick="openInBattleInfo()"
+                  data-i18n="zk.inBattle" data-i18n-title="zk.inBattleTitle"></a></label>
+        <select id="zk_inbattle" class="narrow" autocomplete="off"
+                data-i18n-title="zk.inBattleTitle" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label data-i18n="zk.quest"></label>
+        <select id="zk_quest" autocomplete="off" onchange="modeSync()"></select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button onclick="zkSearch()" data-i18n="zk.search" data-i18n-title="zk.searchTitle"></button>
+      </div>
+    </div>
     <div class="tri-info" id="tr_pos_info"></div>
     <div class="tri-info" id="tr_tri_info"></div>
+    <div class="tri-info mode-zako" id="tr_hp_info"></div>
+    <div class="tri-info mode-zako" id="tr_zk_info"></div>
+    <div class="tri-note" data-i18n="tr.indexNote"></div>
   </div>
   <div class="modal-body">
     <div id="tr_out" class="result-box dim" style="white-space:normal" data-i18n-init="tr.placeholder"></div>
+  </div>
+</div>
+
+<!-- ── 戰鬥中消耗的說明彈窗 ── -->
+<div id="ib_modal" class="info-modal" hidden onclick="if (event.target === this) closeInBattleInfo()">
+  <div class="info-card">
+    <div class="modal-bar">
+      <div class="panel-title" style="margin:0" data-i18n="ib.title"></div>
+      <button class="modal-close" onclick="closeInBattleInfo()" data-i18n-title="tr.close">✕</button>
+    </div>
+    <div id="ib_body"></div>
   </div>
 </div>
 
@@ -470,12 +561,12 @@
 <div class="panel">
   <div class="panel-title" data-i18n="hs.title"></div>
   <div class="row has-hint">
-    <div class="field">
+    <div class="field field-wide">
       <label data-i18n="hs.method"></label>
       <select id="hs_spell" style="width:250px" onchange="spellHint()"></select>
       <span id="hs_spell_hint" class="seed-hint">　</span>
     </div>
-    <div class="field">
+    <div class="field field-wide">
       <label data-i18n="hs.seq"></label>
       <input type="text" id="hs_seq" class="wide" value="32,30,31,31,37">
     </div>
@@ -498,31 +589,97 @@
 </div>
 <div class="note" data-i18n-html="hs.note"></div>
 <hr>
-<p align=center><span data-i18n="app.credit1"></span><br><span data-i18n="app.credit2"></span></p>
+<p align=center><span data-i18n="app.credit1"></span><br><span data-i18n-html="app.credit3"></span><br><span data-i18n="app.credit2"></span></p>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  i18n — 所有介面文字集中在這裡，程式碼一律透過 t(key) 取用。
-//  要加語言：複製 'zh-TW' 整個物件、改成新的語言碼、把值翻掉即可，
-//  不需要動任何邏輯。{xxx} 是代入用的佔位符，順序可依語言自由調換。
-//
-//  ── 英文官方譯名對照（加 'en' 時直接沿用）──────────────────
-//    ホイミ           Heal          ベホイミ    Midheal
-//    ベホイム         Moreheal      ベホマラー  Multiheal
-//    ベホマズン       Omniheal      やくそう    Medicinal Herb
-//    ホイミテーブル   Hoimi Table   とうぞくの秘伝書  Thief's Theory
-//  ── 用詞約定 ────────────────────────────────────────────
-//    RNG 消耗量的底層單位一律是「步」(RNG step)。
-//    B-Table 搜尋面板唯一的推進動作就是ホイミ，1 步 = 1 次，
-//    所以那裡一律講「ホイミ次數」；RNG Trace 有多種推進動作，
-//    一律講「步」。稀有 / 普通 兩個詞不再與 Rare / Normal 混用。
+//  i18n — 介面文字全在這裡，程式一律走 t(key)。加語言＝複製整個物件改語言碼。
+//  官方譯名：ホイミ Heal／ベホイミ Midheal／ベホイム Moreheal／
+//            ベホマラー Multiheal／ベホマズン Omniheal／やくそう Medicinal Herb／
+//            ホイミテーブル Hoimi Table／とうぞくの秘伝書 Thief's Theory
+//  用詞：單位一律「步」。B-Table 面板只有ホイミ一種推進，故講「ホイミ次數」。
 // ═══════════════════════════════════════════════════════════════
 let LANG = 'zh-TW';
 
 const I18N = {
   'zh-TW': {
+    'zk.frameHintFlee': '<span class="dim">一場雜魚戰消耗 <span class="hi">{len}</span> 格 = {parts}，最後 {fleeMax} 格依序是第 1～{fleeMax} 次逃跑。</span>',
+    'zk.fleeGroup'   : '逃跑',
+    'zk.questTag'    : 'Quest #{id}',
+    'zk.questFlee'   : '逃跑（最多 {fleeMax} 次）',
+    'zk.role.flee'   : '第{n}次逃跑',
+    'zk.role.flee4'  : '第{fleeMax}次逃跑（必成）',
+    'zk.fleeWin'     : '<span class="dim">第</span> <span class="hi">{n}</span> <span class="dim">次逃跑成功（#{cell}）</span>',
+    'zk.shigusaSolo': '<span class="dim">人數 1 時 しぐさ 消耗 <span class="hi">0</span> BT。</span>',
+    'tr.indexNote'  : '本工具的格子編號指「到本格為止下一個未使用的亂數步數」，並非舊有工具指的「到本格為止已使用 X 次ホイミ」。',
+    'tr.zakoTitle'  : '推進一整場雜魚戰的消耗；連框長度同此格數',
+    'zk.hpLine'      : '<span class="dim">每隻怪的 HP（佔基礎值）：</span>{list}',
+    'zk.hpItem'      : '<span class="dim">#{cell}</span> <span class="hi">第{n}隻 {hp}%</span>',
+    'ib.title'       : '戰鬥中消耗 —— 各動作加多少',
+    'ib.colAction'   : '動作',
+    'ib.colCost'     : '消耗',
+    'ib.colNote'     : '邊界條件',
+    'ib.unverified'  : '（未證實）',
+    'ib.scout.name'  : 'しらべる',
+    'ib.scout.note'  : '敵人處於<b>任何</b>強化或弱化狀態時<b>不推進</b>；<b>我方先制</b>時則會推進。消耗的那一格同時決定訊息文字：奇數格「こうげきにそなえている」、偶數格「ようすをうかがっている」，可以反查目前位置。',
+    'ib.flee.name'   : 'にげる',
+    'ib.flee.note'   : '<b>成功與失敗都消耗 {cost} 格</b>，成敗由這一格的值決定：第 1 次 &lt; {flee1}%、第 2 次 &lt; {flee2}%、第 3 次 &lt; {flee3}%、第 {fleeMax} 次必定成功。逃不掉的戰鬥（Boss、事件戰、ひとくいばこ）與<b>我方先制</b>時<b>完全不推進</b>。門檻是 RTA 條件下的基準值，實際受きようさ影響，打弱敵時更容易成功。',
+    'ib.coup.name'   : '超必殺技',
+    'ib.coup.note'   : '同一回合全員都選<b>必殺技</b>的當下就會發生，之後選不選<b>超必殺技</b>結果相同。<b>{party} 人齊全才能施展</b>，少一人就發動不了，所以這個值固定是 {party}。用的是戰鬥開場動畫（しぐさ）同一套機制。',
+    'ib.call.name'   : '敵人叫同伴',
+    'ib.call.note'   : '戰鬥中敵人叫來同伴時推進 <b>{cost} 格</b>；<b>沒有來就不推進</b>。（キラーアーマー戰被叫出ベホマスライム 也是 {cost}）わらいぶくろ 這類會叫同伴的怪，做調整時建議避開。',
+    'ib.ally.name'   : '我方同伴死亡',
+    'ib.ally.note'   : '2011 年的單則回報，沒有第二來源佐證。',
+    'ib.medit.name'  : 'めいそう',
+    'ib.medit.note'  : '社群推測值，同一頁裡另有人寫 1。要用之前請自己量過再填。',
+    'ib.item.name'   : '戰鬥中的ホイミ／やくそう',
+    'ib.item.note'   : '<b>不推進</b>。回復呪文與藥草只有在<b>場景上</b>使用才推進（ホイミ {healSteps}、ベホマラー 人數、ベホマズン 人數×2、やくそう {herbSteps}）。這是最容易算錯的一條 —— 戰鬥中補血不會動到表。',
+    'ib.footer'      : '「我方先制」與「敵人先制」是 PreemptiveLottery 的兩個不同結果（回傳 1 與 2），本表只涵蓋我方先制造成的敵人狀態。<br>資料來源：DaisukeDaisuke 的解析、DQ9RTA 的實測整理，以及 2010–2011 年的檢證討論。標「未證實」者只有單一來源，實作前請自行量測。',
+    'app.credit3'  : '雜魚戰與 Quest 判定規格：<a href="https://github.com/DaisukeDaisuke" target="_blank" rel="noopener">DaisukeDaisuke</a>（だいこん）',
+    'tr.mode'        : '判定模式',
+    'tr.modeTitle'   : '切換 Boss 戰掉寶判定 / 一場雜魚戰的消耗與 quest 判定',
+    'tr.modeBoss'    : 'Boss 戰',
+    'tr.modeZako'    : '雜魚戰',
+    'zk.field'       : '場地',
+    'zk.land'        : '地上',
+    'zk.sea'         : '海上',
+    'zk.groups'      : '組數',
+    'zk.groupN'      : '{n} 組',
+    'zk.enemies'     : '敵數',
+    'zk.shigusa'     : 'しぐさ人數',
+    'zk.inBattle'    : '戰鬥中消耗',
+    'zk.inBattleTitle': '戰鬥過程中額外消耗的格數，不含開場與結束。點開看各動作的消耗與邊界條件。',
+    'zk.quest'       : 'Quest',
+    'zk.questNone'   : '不判定',
+    'zk.questOption' : '#{id} {name}（{thr}%{kind}）',
+    'zk.kind.drop'   : '・掉寶',
+    'zk.kind.event'  : '・戰後事件',
+    'zk.search'      : '搜尋',
+    'zk.searchTitle' : '從目前位置往前找：再施幾次ホイミ後打這場雜魚戰，quest 判定才會成立',
+    'zk.needQuest'   : '先選一個 Quest 才能搜尋。',
+    'zk.noHits'      : '{max} 次ホイミ以內找不到成立的位置。',
+    'zk.hits'        : '<span class="ok">{id}：{n} 個可用位置</span>　{list}',
+    'zk.hitItem'     : '{k} 次 → #{cell}',
+    'zk.pass'        : '<span class="ok">成立</span>',
+    'zk.fail'        : '<span class="bad">不成立</span>',
+    'zk.noQuest'     : '<span class="dim">未選 Quest，只算消耗格數</span>',
+    'zk.judgeCell'   : '<span class="dim">判定格</span> <span class="hi">#{cell} = {pct}</span> {verdict}',
+    'zk.frameLine'   : '<span class="hi">{len} 格判定窗 #{from}–#{to}</span>　<span class="dim">= {parts}</span>　{judge}',
+    'zk.frameHint'   : '<span class="dim">一場雜魚戰消耗 <span class="hi">{len}</span> 格 = {parts}，最後一格為 quest 判定。</span>',
+    'zk.frameHintNoQuest': '<span class="dim">一場雜魚戰消耗 <span class="hi">{len}</span> 格 = {parts}。選 Quest 會在最後多出 1 格判定。</span>',
+    'zk.role.enc'    : '遭遇',
+    'zk.role.count1g': '第1組隻數',
+    'zk.role.comp'   : '組數判定',
+    'zk.role.kindN'  : '第{n}組種類',
+    'zk.role.countN' : '第{n}組隻數',
+    'zk.role.swap'   : '組別交換',
+    'zk.role.sea'    : '海上消耗',
+    'zk.role.hp'     : '敵HP抽樣',
+    'zk.role.shigusa': 'しぐさ',
+    'zk.role.inbattle': '戰鬥中',
+    'zk.role.quest'  : 'Quest 判定',
     'app.title'    : 'DQ9 ホイミテーブル (B-Table) 查詢器',
-    'app.subtitle' : '64-bit LCG：seed = (seed × 0x5D588B656C078965 + 0x269EC3) & 0xFFFFFFFFFFFFFFFF',
+    'app.subtitle' : '64-bit LCG：seed = (seed × {mult} + {add}) & {mask}',
     'app.credit1'  : 'Based on research by DQ9 lovers from worldwide player communities',
     'app.credit2'  : 'Powered by Claude',
 
@@ -545,8 +702,8 @@ const I18N = {
     'bt.normalB'      : '普通掉寶 B (%)',
     'bt.bookRare'     : '盜賊秘傳書 稀有掉寶 CEGI',
     'bt.bookNormal'   : '盜賊秘傳書 普通掉寶 DFHJ',
-    'bt.exactRare'    : '恰好 {n} 個符合 A-1%',
-    'bt.exactNormal'  : '恰好 {n} 個符合 B-1%',
+    'bt.exactRare'    : '恰好 {n} 個符合 A−{book}%',
+    'bt.exactNormal'  : '恰好 {n} 個符合 B−{book}%',
     'bt.consec1'      : '連續1 (A+C 皆符合)',
     'bt.consec2'      : '連續2 (A+C+E 皆符合)',
     'bt.consec3'      : '連續3 (A+C+E+G 皆符合)',
@@ -567,19 +724,18 @@ const I18N = {
     'bt.dfhjAny'      : 'DFHJ不限',
     'bt.dfhjCount'    : 'DFHJ={n}個',
     'bt.consecLabel'  : '連續{n}',
-    'bt.note'         : '📖 <strong>盜賊秘傳書的效果：</strong>第 1 個掉寶判定閾值為 A%，第 2〜5 個判定因盜賊秘傳書限制，最大閾值降為 <strong>A−1%</strong>（B系同理）。實際閾值隨秘傳書持有角色的Lv而變，Lv99時達到最大閾值。',
+    'bt.note'         : '📖 <strong>盜賊秘傳書的效果：</strong>第 1 個掉寶判定閾值為 A%，第 2〜{rounds} 個判定因盜賊秘傳書限制，最大閾值降為 <strong>A−{book}%</strong>（B系同理）。實際閾值隨秘傳書持有角色的Lv而變，Lv99時達到最大閾值。',
 
     'tr.title'      : '🔬 RNG Trace — 從指定 Seed 展開 B-Table',
     'tr.open'       : '開啟全屏 RNG Trace',
     'tr.openHint'   : '全屏展開 B-Table，控制列固定在頂端。',
     'tr.close'      : '關閉 (Esc)',
-    'tr.expand'     : '展開 200步',
-    'tr.more'       : '追加 +200',
+    'tr.expand'     : '展開 {batch}步',
+    'tr.more'       : '追加 +{batch}',
     'tr.rarePct'    : '稀有 (%)',
     'tr.normalPct'  : '普通 (%)',
     'tr.adv1'       : 'ホイミ等',
-    'tr.boss'       : 'Boss 戰',
-    'tr.bossTitle'  : 'Boss 戰一次（3 ＋ 盜賊秘傳書數目 × 3 步）；連框長度同此步數',
+    'tr.bossTitle'  : 'Boss 戰一次（{round} ＋ 盜賊秘傳書數目 × {round} 步）；連框長度同此步數',
     'tr.books'      : '盜賊秘傳書數目',
     'tr.undo'       : '復原',
     'tr.undoTitle'  : '退回上一次推進（Backspace）',
@@ -589,7 +745,7 @@ const I18N = {
     'tr.castPart'    : '{name}×{n}',
     'tr.posNext'    : '　<span class="dim">下一步</span> <span class="hi">#{next} = {pct}</span>',
     'tr.frameLine'  : '<span class="hi">{len} 連框 #{from}–#{to}</span>{vals}　<span class="dim">稀有</span> <span class="hi">{rare}</span>　<span class="dim">普通</span> <span class="hi">{normal}</span>　<span class="dim">(再點一次取消)</span>',
-    'tr.frameHint'  : '<span class="dim">點任一方格或按上排推進鈕，可框出 {len} 連框（長度跟著 Boss 戰按鈕、推進時整段跟著走）；框內每 3 格為一組「稀有 / 普通 / 空轉」，低於門檻的會自動上色（第 2 組起套用盜賊秘傳書的 −1%）。</span>',
+    'tr.frameHint'  : '<span class="dim">點任一方格或按上排推進鈕，可框出 {len} 連框（長度跟著 Boss 戰按鈕、推進時整段跟著走）；框內每 {round} 格為一組「稀有 / 普通 / 空轉」，低於門檻的會自動上色（第 2 組起套用盜賊秘傳書的 −{book}%）。</span>',
 
     'spell.heal'      : 'ホイミ',
     'spell.midheal'   : 'ベホイミ',
@@ -615,12 +771,87 @@ const I18N = {
     'hs.hint'        : '提示：確認回復手段選擇與觀察序列是否對應，或改用更大的搜尋範圍。',
     'hs.formula'     : '回復量 = {base} + round(rng×{m}/2³²) → {from}–{to}　每次消耗 {steps} 步',
     'hs.verifyHead'  : 'Seed 0x{seed} 的 {name} 回復量序列（前 {n} 個）：',
-    'hs.note'        : '🧮 <strong>回復量公式：</strong>回復量 = 基本回復量 ＋ round(rng<sub>hi32</sub> × 振れ幅 ÷ 2³²)。呪文每次消耗 <strong>1 步</strong> RNG；<strong>藥草</strong>每次消耗 <strong>2 步</strong>（先空轉 1 步，第 2 步才是取值步）。公式已以實測序列 32,30,31,31,37 驗證（ホイミ 唯一解 0x32742，日版卡帶範圍內）。',
+    'hs.note'        : '🧮 <strong>回復量公式：</strong>回復量 = 基本回復量 ＋ round(rng<sub>hi32</sub> × 振れ幅 ÷ 2³²)。呪文每次消耗 <strong>{healSteps} 步</strong> RNG；<strong>藥草</strong>每次消耗 <strong>{herbSteps} 步</strong>（先空轉 {herbIdle} 步，第 {herbSteps} 步才是取值步）。公式已以實測序列 32,30,31,31,37 驗證（ホイミ 唯一解 0x32742，日版卡帶範圍內）。',
   },
 
   'en': {
+    'zk.frameHintFlee': '<span class="dim">One mob battle costs <span class="hi">{len}</span> cells = {parts}; the last {fleeMax} are flee tries 1–{fleeMax}.</span>',
+    'zk.fleeGroup'   : 'flee',
+    'zk.questTag'    : 'Quest #{id}',
+    'zk.questFlee'   : 'Flee (up to {fleeMax} tries)',
+    'zk.role.flee'   : 'flee try {n}',
+    'zk.role.flee4'  : 'flee try {fleeMax} (always works)',
+    'zk.fleeWin'     : '<span class="dim">escapes on try</span> <span class="hi">{n}</span> <span class="dim">(#{cell})</span>',
+    'zk.shigusaSolo': '<span class="dim">A party of 1 spends <span class="hi">0</span> BT on the gesture.</span>',
+    'tr.indexNote'  : 'Cell numbers here mean “the next unused RNG step as of this cell”, not the older tools’ “X Heals cast so far”.',
+    'tr.zakoTitle'  : 'Advance by one whole mob battle; the frame is the same length',
+    'zk.hpLine'      : '<span class="dim">Monster HP (share of base):</span> {list}',
+    'zk.hpItem'      : '<span class="dim">#{cell}</span> <span class="hi">#{n} → {hp}%</span>',
+    'ib.title'       : 'In-battle cost — what each action adds',
+    'ib.colAction'   : 'Action',
+    'ib.colCost'     : 'Cost',
+    'ib.colNote'     : 'Boundary conditions',
+    'ib.unverified'  : '(unverified)',
+    'ib.scout.name'  : 'Scout',
+    'ib.scout.note'  : 'Does <b>not</b> advance while the enemy carries <b>any</b> buff or debuff; after <b>your own preemptive</b> strike it does advance. The consumed cell also picks the message — odd cell "readying an attack", even cell "sizing you up" — so it can be read back to locate your position.',
+    'ib.flee.name'   : 'Flee',
+    'ib.flee.note'   : '<b>Costs {cost} whether it succeeds or fails</b>; that same cell decides the outcome: 1st attempt &lt; {flee1}%, 2nd &lt; {flee2}%, 3rd &lt; {flee3}%, try {fleeMax} always succeeds. In battles you cannot flee (bosses, event battles, mimics) and after <b>your own preemptive</b> strike it does <b>not advance at all</b>. Those thresholds are the RTA baseline — deftness raises them, so weak enemies are easier to escape.',
+    'ib.coup.name'   : 'Co-op de Grâce',
+    'ib.coup.note'   : 'Happens the moment every party member picks their own <b>Coup de Grâce</b> in the same turn; whether you then take the <b>Co-op de Grâce</b> makes no difference. It <b>needs a full party of {party}</b> — one short and it cannot be performed at all — so the cost is always {party}. It reuses the battle-opening gesture mechanism.',
+    'ib.call.name'   : 'Enemy calls for help',
+    'ib.call.note'   : 'When an enemy calls for help mid-battle and a companion <b>arrives</b>, the table advances <b>{cost}</b>; if <b>none comes it does not advance</b>. (A Healslime summoned in the Killer Armour fight is also {cost}.) Avoid summoners like Bag o’ Laughs when setting up.',
+    'ib.ally.name'   : 'Party member dies',
+    'ib.ally.note'   : 'A single 2011 report with no corroborating source.',
+    'ib.medit.name'  : 'Meditation',
+    'ib.medit.note'  : 'A community guess; another poster on the same page says 1. Measure it yourself before relying on it.',
+    'ib.item.name'   : 'Heal / herb used in battle',
+    'ib.item.note'   : '<b>Does not advance.</b> Healing spells and herbs only advance the table when used <b>in the field</b> (Heal {healSteps}, Multiheal = party size, Omniheal = party size × 2, Medicinal Herb {herbSteps}). This is the easiest one to get wrong — healing mid-battle never touches the table.',
+    'ib.footer'      : 'Your own preemptive strike and an enemy ambush are two different outcomes of PreemptiveLottery (return 1 vs 2); this table only covers the enemy state caused by your own.<br>Sources: DaisukeDaisuke\'s disassembly work, the DQ9 RTA measurements, and the 2010–2011 verification threads. Rows marked unverified rest on a single report — measure before relying on them.',
+    'app.credit3'  : 'Mob battle &amp; quest check specs by <a href="https://github.com/DaisukeDaisuke" target="_blank" rel="noopener">DaisukeDaisuke</a>',
+    'tr.mode'        : 'Mode',
+    'tr.modeTitle'   : 'Switch between boss drop checks and one mob battle (cost + quest check)',
+    'tr.modeBoss'    : 'Boss',
+    'tr.modeZako'    : 'Mob',
+    'zk.field'       : 'Terrain',
+    'zk.land'        : 'Land',
+    'zk.sea'         : 'Sea',
+    'zk.groups'      : 'Groups',
+    'zk.groupN'      : '{n}G',
+    'zk.enemies'     : 'Enemies',
+    'zk.shigusa'     : 'Gesture',
+    'zk.inBattle'    : 'In battle',
+    'zk.inBattleTitle': 'Extra cells consumed during the battle, excluding start and end. Click for each action’s cost and edge cases.',
+    'zk.quest'       : 'Quest',
+    'zk.questNone'   : 'None',
+    'zk.questOption' : '#{id} {name} ({thr}%{kind})',
+    'zk.kind.drop'   : ', drop',
+    'zk.kind.event'  : ', post-battle event',
+    'zk.search'      : 'Search',
+    'zk.searchTitle' : 'From the current position, find how many more Heals to cast before this mob battle for the quest check to pass',
+    'zk.needQuest'   : 'Pick a quest first.',
+    'zk.noHits'      : 'No passing position within {max} Heals.',
+    'zk.hits'        : '<span class="ok">{id}: {n} usable positions</span>　{list}',
+    'zk.hitItem'     : 'cast {k} → #{cell}',
+    'zk.pass'        : '<span class="ok">passes</span>',
+    'zk.fail'        : '<span class="bad">fails</span>',
+    'zk.noQuest'     : '<span class="dim">No quest selected — cost only</span>',
+    'zk.judgeCell'   : '<span class="dim">check cell</span> <span class="hi">#{cell} = {pct}</span> {verdict}',
+    'zk.frameLine'   : '<span class="hi">{len}-cell window #{from}–#{to}</span>　<span class="dim">= {parts}</span>　{judge}',
+    'zk.frameHint'   : '<span class="dim">One mob battle costs <span class="hi">{len}</span> cells = {parts}; the last is the quest check.</span>',
+    'zk.frameHintNoQuest': '<span class="dim">One mob battle costs <span class="hi">{len}</span> cells = {parts}. Picking a quest adds a check cell at the end.</span>',
+    'zk.role.enc'    : 'encounter',
+    'zk.role.count1g': '1st group count',
+    'zk.role.comp'   : 'group check',
+    'zk.role.kindN'  : 'group {n} type',
+    'zk.role.countN' : 'group {n} count',
+    'zk.role.swap'   : 'group swap',
+    'zk.role.sea'    : 'sea cost',
+    'zk.role.hp'     : 'HP rolls',
+    'zk.role.shigusa': 'gesture',
+    'zk.role.inbattle': 'in battle',
+    'zk.role.quest'  : 'quest check',
     'app.title'    : 'DQ9 Hoimi Table (B-Table) Searcher',
-    'app.subtitle' : '64-bit LCG: seed = (seed × 0x5D588B656C078965 + 0x269EC3) & 0xFFFFFFFFFFFFFFFF',
+    'app.subtitle' : '64-bit LCG: seed = (seed × {mult} + {add}) & {mask}',
     'app.credit1'  : 'Based on research by DQ9 lovers from worldwide player communities',
     'app.credit2'  : 'Powered by Claude',
 
@@ -643,8 +874,8 @@ const I18N = {
     'bt.normalB'      : 'Common drop B (%)',
     'bt.bookRare'     : "Thief's Theory — rare CEGI",
     'bt.bookNormal'   : "Thief's Theory — common DFHJ",
-    'bt.exactRare'    : 'Exactly {n} within A−1%',
-    'bt.exactNormal'  : 'Exactly {n} within B−1%',
+    'bt.exactRare'    : 'Exactly {n} within A−{book}%',
+    'bt.exactNormal'  : 'Exactly {n} within B−{book}%',
     'bt.consec1'      : 'Streak 1 (A+C both hit)',
     'bt.consec2'      : 'Streak 2 (A+C+E all hit)',
     'bt.consec3'      : 'Streak 3 (A+C+E+G all hit)',
@@ -665,19 +896,18 @@ const I18N = {
     'bt.dfhjAny'      : 'DFHJ any',
     'bt.dfhjCount'    : 'DFHJ={n}',
     'bt.consecLabel'  : 'Streak {n}',
-    'bt.note'         : "📖 <strong>Thief's Theory:</strong> the 1st drop check uses A%. Checks 2–5 are capped at <strong>A−1%</strong> by Thief's Theory (the B series works the same way). The real threshold scales with the holder's level and reaches the cap at Lv99.",
+    'bt.note'         : "📖 <strong>Thief's Theory:</strong> the 1st drop check uses A%. Checks 2–{rounds} are capped at <strong>A−{book}%</strong> by Thief's Theory (the B series works the same way). The real threshold scales with the holder's level and reaches the cap at Lv99.",
 
     'tr.title'      : '🔬 RNG Trace — expand the B-Table from a seed',
     'tr.open'       : 'Open full-screen RNG Trace',
     'tr.openHint'   : 'Expands the B-Table full-screen with the controls pinned to the top.',
     'tr.close'      : 'Close (Esc)',
-    'tr.expand'     : 'Expand 200',
-    'tr.more'       : 'Append +200',
+    'tr.expand'     : 'Expand {batch}',
+    'tr.more'       : 'Append +{batch}',
     'tr.rarePct'    : 'Rare (%)',
     'tr.normalPct'  : 'Common (%)',
     'tr.adv1'       : 'Heal etc.',
-    'tr.boss'       : 'Boss fight',
-    'tr.bossTitle'  : "One boss fight (3 + Thief's Theory count × 3 steps); the frame is the same length",
+    'tr.bossTitle'  : "One boss fight ({round} + Thief's Theory count × {round} steps); the frame is the same length",
     'tr.books'      : "Thief's Theory count",
     'tr.undo'       : 'Undo',
     'tr.undoTitle'  : 'Undo the last advance (Backspace)',
@@ -687,7 +917,7 @@ const I18N = {
     'tr.castPart'    : '{name}×{n}',
     'tr.posNext'    : '　<span class="dim">next</span> <span class="hi">#{next} = {pct}</span>',
     'tr.frameLine'  : '<span class="hi">{len}-frame #{from}–#{to}</span>{vals}　<span class="dim">rare</span> <span class="hi">{rare}</span>　<span class="dim">common</span> <span class="hi">{normal}</span>　<span class="dim">(click again to clear)</span>',
-    'tr.frameHint'  : "<span class=\"dim\">Click any cell, or press an advance button, to draw a {len}-cell frame (its length follows the Boss fight button, and it moves with every advance). Each group of 3 cells is one rare / common / skipped check; anything under the threshold is coloured automatically (groups from the 2nd on apply the Thief's Theory −1%).</span>",
+    'tr.frameHint'  : "<span class=\"dim\">Click any cell, or press an advance button, to draw a {len}-cell frame (its length follows the Boss fight button, and it moves with every advance). Each group of {round} cells is one rare / common / skipped check; anything under the threshold is coloured automatically (groups from the 2nd on apply the Thief's Theory −{book}%).</span>",
 
     'spell.heal'      : 'Heal',
     'spell.midheal'   : 'Midheal',
@@ -713,12 +943,87 @@ const I18N = {
     'hs.hint'        : 'Tip: check that the healing method matches the observed sequence, or widen the search range.',
     'hs.formula'     : 'HP restored = {base} + round(rng×{m}/2³²) → {from}–{to}　{steps} step(s) per cast',
     'hs.verifyHead'  : '{name} sequence for seed 0x{seed} (first {n}):',
-    'hs.note'        : '🧮 <strong>Restore formula:</strong> HP restored = base + round(rng<sub>hi32</sub> × spread ÷ 2³²). A spell consumes <strong>1 step</strong> of RNG; a <strong>Medicinal Herb</strong> consumes <strong>2 steps</strong> (one idle step, then the value step). Verified against the observed sequence 32,30,31,31,37 (Heal: unique solution 0x32742, inside the JP cartridge range).',
+    'hs.note'        : '🧮 <strong>Restore formula:</strong> HP restored = base + round(rng<sub>hi32</sub> × spread ÷ 2³²). A spell consumes <strong>{healSteps} step</strong> of RNG; a <strong>Medicinal Herb</strong> consumes <strong>{herbSteps} steps</strong> ({herbIdle} idle, then the value step). Verified against the observed sequence 32,30,31,31,37 (Heal: unique solution 0x32742, inside the JP cartridge range).',
   },
 
   'ja': {
+    'zk.frameHintFlee': '<span class="dim">ザコ戦1回の消費は <span class="hi">{len}</span> マス = {parts}。最後の {fleeMax} マスが 1～{fleeMax} 回目のにげるです。</span>',
+    'zk.fleeGroup'   : 'にげる',
+    'zk.questTag'    : 'クエスト#{id}',
+    'zk.questFlee'   : 'にげる（最大{fleeMax}回）',
+    'zk.role.flee'   : '{n}回目のにげる',
+    'zk.role.flee4'  : '{fleeMax}回目（必ず成功）',
+    'zk.fleeWin'     : '<span class="dim">にげる</span> <span class="hi">{n}</span> <span class="dim">回目で成功（#{cell}）</span>',
+    'zk.shigusaSolo': '<span class="dim">人数 1 のとき、しぐさの消費は <span class="hi">0</span> です。</span>',
+    'tr.indexNote'  : '本ツールのマス番号は「このマス時点で次に使われる未使用の乱数ステップ数」です。従来ツールの「このマスまでにホイミを X 回使用」とは異なります。',
+    'tr.zakoTitle'  : 'ザコ戦1回分の消費を進めます。判定窓の長さも同じです',
+    'zk.hpLine'      : '<span class="dim">各敵のHP（基礎値に対する割合）：</span>{list}',
+    'zk.hpItem'      : '<span class="dim">#{cell}</span> <span class="hi">{n}体目 {hp}%</span>',
+    'ib.title'       : '戦闘中消費 — 各行動が何マス進めるか',
+    'ib.colAction'   : '行動',
+    'ib.colCost'     : '消費',
+    'ib.colNote'     : '境界条件',
+    'ib.unverified'  : '（未検証）',
+    'ib.scout.name'  : 'しらべる',
+    'ib.scout.note'  : '敵が<b>何らかの</b>バフ・デバフ状態のときは<b>進みません</b>。<b>味方の先制</b>なら進みます。消費したマスがメッセージも決めます：奇数マス「こうげきにそなえている」、偶数マス「ようすをうかがっている」。現在地の逆算に使えます。',
+    'ib.flee.name'   : 'にげる',
+    'ib.flee.note'   : '<b>成功・失敗どちらでも {cost} マス消費</b>し、そのマスの値で成否が決まります：1回目 &lt; {flee1}%、2回目 &lt; {flee2}%、3回目 &lt; {flee3}%、{fleeMax}回目は必ず成功。逃げられない戦闘（ボス・イベント戦・ひとくいばこ）と<b>味方の先制</b>のときは<b>まったく進みません</b>。この閾値は RTA 条件での基準で、実際はきようさで上がります。',
+    'ib.coup.name'   : '超必殺技',
+    'ib.coup.note'   : '同一ターン内に全員が必殺を選択した時点で発生し、超必殺技を選んでも選ばなくても同じです。<b>{party}人揃わないと発動できない</b>ため、この値は常に {party} です。戦闘開始時のアニメーション（しぐさ）と同じ仕組みを使っています。',
+    'ib.call.name'   : '敵が仲間を呼ぶ',
+    'ib.call.note'   : '途中で敵が仲間を呼んだ場合は <b>{cost}つ進む</b>。<b>来なかった場合は進まない</b>。（キラーアーマー戦のベホマスライムも {cost}）わらいぶくろなど呼ぶ敵は調整時に避けるのが無難です。',
+    'ib.ally.name'   : '味方が死ぬ',
+    'ib.ally.note'   : '2011 年の単独報告のみで、裏付けとなる別ソースがありません。',
+    'ib.medit.name'  : 'めいそう',
+    'ib.medit.note'  : 'コミュニティの推測値。同じページに 1 と書いている人もいます。使う前に自分で計測してください。',
+    'ib.item.name'   : '戦闘中のホイミ・やくそう',
+    'ib.item.note'   : '<b>進みません。</b>回復呪文と薬草は<b>フィールド上</b>で使ったときだけ進みます（ホイミ {healSteps}、ベホマラー 人数分、ベホマズン 人数×2、やくそう {herbSteps}）。最も間違えやすい項目です — 戦闘中の回復はテーブルを動かしません。',
+    'ib.footer'      : '「味方の先制」と「敵の先制」は PreemptiveLottery の別々の結果（戻り値 1 と 2）で、本表が扱うのは味方の先制による敵の状態のみです。<br>出典：DaisukeDaisuke 氏の解析、DQ9RTA の実測まとめ、および 2010〜2011 年の検証スレ。「未検証」の行は単一報告のみです。実装前にご自身で計測してください。',
+    'app.credit3'  : 'ザコ戦・クエスト判定の仕様：<a href="https://github.com/DaisukeDaisuke" target="_blank" rel="noopener">DaisukeDaisuke</a>（だいこん）',
+    'tr.mode'        : '判定モード',
+    'tr.modeTitle'   : 'ボス戦のドロップ判定と、ザコ戦1回の消費＋クエスト判定を切り替え',
+    'tr.modeBoss'    : 'ボス戦',
+    'tr.modeZako'    : 'ザコ戦',
+    'zk.field'       : '場所',
+    'zk.land'        : '地上',
+    'zk.sea'         : '海上',
+    'zk.groups'      : 'グループ数',
+    'zk.groupN'      : '{n}G',
+    'zk.enemies'     : '敵の数',
+    'zk.shigusa'     : 'しぐさ人数',
+    'zk.inBattle'    : '戦闘中消費',
+    'zk.inBattleTitle': '戦闘中に余分に消費するマス数（開始・終了は含まない）。クリックで各行動の消費と境界条件を表示。',
+    'zk.quest'       : 'クエスト',
+    'zk.questNone'   : 'なし',
+    'zk.questOption' : '#{id} {name}（{thr}%{kind}）',
+    'zk.kind.drop'   : '・ドロップ',
+    'zk.kind.event'  : '・戦闘後イベント',
+    'zk.search'      : '検索',
+    'zk.searchTitle' : '現在地から、あと何回ホイミを使ってからこのザコ戦をすればクエスト判定が成功するかを検索',
+    'zk.needQuest'   : '先にクエストを選んでください。',
+    'zk.noHits'      : 'ホイミ{max}回以内に成功する位置はありません。',
+    'zk.hits'        : '<span class="ok">{id}：{n}個の候補</span>　{list}',
+    'zk.hitItem'     : '{k}回 → #{cell}',
+    'zk.pass'        : '<span class="ok">成功</span>',
+    'zk.fail'        : '<span class="bad">失敗</span>',
+    'zk.noQuest'     : '<span class="dim">クエスト未選択・消費数のみ</span>',
+    'zk.judgeCell'   : '<span class="dim">判定マス</span> <span class="hi">#{cell} = {pct}</span> {verdict}',
+    'zk.frameLine'   : '<span class="hi">{len}マスの判定窓 #{from}–#{to}</span>　<span class="dim">= {parts}</span>　{judge}',
+    'zk.frameHint'   : '<span class="dim">ザコ戦1回の消費は <span class="hi">{len}</span> マス = {parts}。最後のマスがクエスト判定です。</span>',
+    'zk.frameHintNoQuest': '<span class="dim">ザコ戦1回の消費は <span class="hi">{len}</span> マス = {parts}。クエストを選ぶと最後に判定マスが 1 つ増えます。</span>',
+    'zk.role.enc'    : 'エンカ',
+    'zk.role.count1g': '1組目の数',
+    'zk.role.comp'   : 'お供判定',
+    'zk.role.kindN'  : '{n}組目の種類',
+    'zk.role.countN' : '{n}組目の数',
+    'zk.role.swap'   : '入替',
+    'zk.role.sea'    : '海上消費',
+    'zk.role.hp'     : '敵HP抽選',
+    'zk.role.shigusa': 'しぐさ',
+    'zk.role.inbattle': '戦闘中',
+    'zk.role.quest'  : 'クエスト判定',
     'app.title'    : 'DQ9 ホイミテーブル (B-Table) 検索ツール',
-    'app.subtitle' : '64-bit LCG：seed = (seed × 0x5D588B656C078965 + 0x269EC3) & 0xFFFFFFFFFFFFFFFF',
+    'app.subtitle' : '64-bit LCG：seed = (seed × {mult} + {add}) & {mask}',
     'app.credit1'  : 'Based on research by DQ9 lovers from worldwide player communities',
     'app.credit2'  : 'Powered by Claude',
 
@@ -741,8 +1046,8 @@ const I18N = {
     'bt.normalB'      : '通常ドロップ B (%)',
     'bt.bookRare'     : 'とうぞくの秘伝書 レア CEGI',
     'bt.bookNormal'   : 'とうぞくの秘伝書 通常 DFHJ',
-    'bt.exactRare'    : 'ちょうど {n} 個が A−1% 以内',
-    'bt.exactNormal'  : 'ちょうど {n} 個が B−1% 以内',
+    'bt.exactRare'    : 'ちょうど {n} 個が A−{book}% 以内',
+    'bt.exactNormal'  : 'ちょうど {n} 個が B−{book}% 以内',
     'bt.consec1'      : '連続1（A+C とも成立）',
     'bt.consec2'      : '連続2（A+C+E すべて成立）',
     'bt.consec3'      : '連続3（A+C+E+G すべて成立）',
@@ -763,19 +1068,18 @@ const I18N = {
     'bt.dfhjAny'      : 'DFHJ指定なし',
     'bt.dfhjCount'    : 'DFHJ={n}個',
     'bt.consecLabel'  : '連続{n}',
-    'bt.note'         : '📖 <strong>とうぞくの秘伝書の効果：</strong>1 個目のドロップ判定のしきい値は A%、2〜5 個目はとうぞくの秘伝書の制限により最大 <strong>A−1%</strong> まで下がります（B 系も同様）。実際のしきい値は所持キャラの Lv によって変わり、Lv99 で最大値に達します。',
+    'bt.note'         : '📖 <strong>とうぞくの秘伝書の効果：</strong>1 個目のドロップ判定のしきい値は A%、2〜{rounds} 個目はとうぞくの秘伝書の制限により最大 <strong>A−{book}%</strong> まで下がります（B 系も同様）。実際のしきい値は所持キャラの Lv によって変わり、Lv99 で最大値に達します。',
 
     'tr.title'      : '🔬 RNG Trace — 指定シードから B-Table を展開',
     'tr.open'       : 'RNG Trace を全画面で開く',
     'tr.openHint'   : 'B-Table を全画面展開します。操作列は上部に固定されます。',
     'tr.close'      : '閉じる (Esc)',
-    'tr.expand'     : '200歩展開',
-    'tr.more'       : '+200 追加',
+    'tr.expand'     : '{batch}歩展開',
+    'tr.more'       : '+{batch} 追加',
     'tr.rarePct'    : 'レア (%)',
     'tr.normalPct'  : '通常 (%)',
     'tr.adv1'       : 'ホイミ等',
-    'tr.boss'       : 'ボス戦',
-    'tr.bossTitle'  : 'ボス戦 1 回（3 ＋ とうぞくの秘伝書の数 × 3 歩）。連続枠の長さも同じ歩数',
+    'tr.bossTitle'  : 'ボス戦 1 回（{round} ＋ とうぞくの秘伝書の数 × {round} 歩）。連続枠の長さも同じ歩数',
     'tr.books'      : 'とうぞくの秘伝書の数',
     'tr.undo'       : '戻す',
     'tr.undoTitle'  : '直前の消費を取り消す（Backspace）',
@@ -785,7 +1089,7 @@ const I18N = {
     'tr.castPart'    : '{name}×{n}',
     'tr.posNext'    : '　<span class="dim">次</span> <span class="hi">#{next} = {pct}</span>',
     'tr.frameLine'  : '<span class="hi">{len} 連続枠 #{from}–#{to}</span>{vals}　<span class="dim">レア</span> <span class="hi">{rare}</span>　<span class="dim">通常</span> <span class="hi">{normal}</span>　<span class="dim">（もう一度クリックで解除）</span>',
-    'tr.frameHint'  : '<span class="dim">マスをクリックするか上の消費ボタンを押すと、{len} 連続枠を表示します（長さはボス戦ボタンに連動し、消費すると枠ごと移動）。枠内は 3 マスで「レア / 通常 / 空回し」の 1 組です。しきい値未満のマスは自動で色が付きます（2 組目からはとうぞくの秘伝書の −1% を適用）。</span>',
+    'tr.frameHint'  : '<span class="dim">マスをクリックするか上の消費ボタンを押すと、{len} 連続枠を表示します（長さはボス戦ボタンに連動し、消費すると枠ごと移動）。枠内は {round} マスで「レア / 通常 / 空回し」の 1 組です。しきい値未満のマスは自動で色が付きます（2 組目からはとうぞくの秘伝書の −{book}% を適用）。</span>',
 
     'spell.heal'      : 'ホイミ',
     'spell.midheal'   : 'ベホイミ',
@@ -811,7 +1115,7 @@ const I18N = {
     'hs.hint'        : 'ヒント：回復手段の選択と観測値が対応しているか確認するか、検索範囲を広げてください。',
     'hs.formula'     : '回復量 = {base} + round(rng×{m}/2³²) → {from}–{to}　1 回あたり {steps} 歩消費',
     'hs.verifyHead'  : 'シード 0x{seed} の {name} 回復量の数列（先頭 {n} 件）：',
-    'hs.note'        : '🧮 <strong>回復量の計算式：</strong>回復量 = 基本回復量 ＋ round(rng<sub>hi32</sub> × 振れ幅 ÷ 2³²)。呪文は 1 回につき <strong>1 歩</strong>、<strong>やくそう</strong>は <strong>2 歩</strong> 消費します（1 歩空回しして 2 歩目が取得値）。実測列 32,30,31,31,37 で検証済み（ホイミの唯一解 0x32742、日本版ROMの範囲内）。',
+    'hs.note'        : '🧮 <strong>回復量の計算式：</strong>回復量 = 基本回復量 ＋ round(rng<sub>hi32</sub> × 振れ幅 ÷ 2³²)。呪文は 1 回につき <strong>{healSteps} 歩</strong>、<strong>やくそう</strong>は <strong>{herbSteps} 歩</strong> 消費します（{herbIdle} 歩空回しして {herbSteps} 歩目が取得値）。実測列 32,30,31,31,37 で検証済み（ホイミの唯一解 0x32742、日本版ROMの範囲内）。',
   },
 };
 
@@ -819,17 +1123,24 @@ const I18N = {
 function t(key, params) {
   let str = I18N[LANG][key];
   if (str === undefined) return key;
-  // 全域常數一律自動代入，譯文裡就不必寫死數字（掉寶上限改了，所有語言一起跟著改）
-  const p = Object.assign({ limit: BT_DROP_LIMIT, over: BT_DROP_LIMIT + 1 }, params || {});
+  // 程式常數一律自動代入，譯文不寫死數字
+  const p = Object.assign({
+    limit: BT_DROP_LIMIT, over: BT_DROP_LIMIT + 1,
+    round: BT_ROUND_LEN, book: BT_BOOK_OFFSET, rounds: BT_ROUNDS,
+    batch: TR_BATCH, party: PARTY_MAX,
+    flee1: ZK_FLEE_THR[0], flee2: ZK_FLEE_THR[1], flee3: ZK_FLEE_THR[2],
+    fleeMax: ZK_FLEE_THR.length + 1,
+    healSteps: spellSteps('spell.heal'), herbSteps: spellSteps('spell.herb'),
+    herbIdle:  spellSteps('spell.herb') - 1,
+    mult: '0x' + hexUp(LCG_MULT), add: '0x' + hexUp(LCG_ADD), mask: '0x' + hexUp(LCG_MASK),
+  }, params || {});
   for (const k in p) str = str.split('{' + k + '}').join(p[k]);
   return str;
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  卡帶 / 平台的 BT Seed 範圍 —— 單一真相來源
-//  平台識別、逆推的「搜尋範圍」選單、以及顯示用的範圍文字都吃這裡。
-//  順序就是選單順序；platformInfo 會先比對非 fallback 的項目，
-//  所以美版要排在歐版前面（美版範圍被歐版包住）。
+//  卡帶／平台 BT Seed 範圍 —— 單一真相來源：平台識別、搜尋範圍選單、範圍文字。
+//  順序＝選單順序。美版範圍被歐版包住，故須排在歐版前面。
 // ═══════════════════════════════════════════════════════════════
 const SEED_RANGES = [
   { platKey:'plat.emu', nameKey:'plat.all', from:0x16000, to:0x3FFFF, color:'var(--text-dim)', fallback:true },
@@ -844,10 +1155,8 @@ const rangeValue   = r => `${hexUp(r.from)},${hexUp(r.to)}`; // 選單 value，�
 const seedRangeAll = () => SEED_RANGES.find(r => r.fallback);
 
 // ═══════════════════════════════════════════════════════════════
-//  RNG Trace 的推進手段 —— 單一真相來源
-//  每種回復手段消耗幾步 RNG。推進按鈕（+1 / +4 / +8）與「已消耗 N 步」
-//  的施法次數換算都由這裡產生，數字不會兩邊各寫一份。
-//  這裡由小到大排，就是按鈕的排列順序。
+//  推進手段 —— 單一真相來源：推進按鈕與「已消耗 N 步」的換算都由此產生。
+//  由小到大＝按鈕順序。
 // ═══════════════════════════════════════════════════════════════
 const TR_CASTS = [
   { nameKey:'spell.heal',      btnKey:'tr.adv1',         steps:1 },
@@ -855,8 +1164,7 @@ const TR_CASTS = [
   { nameKey:'spell.omniheal',  btnKey:'spell.omniheal',  steps:8 },
 ];
 
-// 把步數換算成「幾個ベホマズン + 幾個ベホマラー + 幾個ホイミ」。
-// 由大到小貪心取用；8 = 2×4、4 = 4×1，所以貪心結果就是最少施法次數。
+// 換算成施法次數。由大到小貪心；8=2×4、4=4×1，故貪心即最少次數。
 function castBreakdown(steps) {
   let left = steps;
   const parts = [];
@@ -866,6 +1174,9 @@ function castBreakdown(steps) {
   }
   return parts;
 }
+
+const PARTY_MAX = 4;   // 隊伍人數上限；超必殺技也必須滿 4 人
+const spellSteps = key => SPELLS.find(sp => sp.key === key).steps;
 
 // 回復手段參數表（基本回復量 / 振れ幅 / 每次消耗的 RNG 步數）
 const SPELLS = [
@@ -880,6 +1191,9 @@ function selectDefaults() {
   return {
     bt_a: 10, bt_b: 0, bt_m: 'any', bt_n: 'any',
     tr_rare: 2, tr_normal: 10, tr_books: 0,
+    zk_field: 'land', zk_groups: 1, zk_enemies: 1,
+    zk_shigusa: 0, zk_inbattle: 0, zk_quest: 'none',
+    bt_steps: 100000,
     hs_spell: 0,
     hs_range: rangeValue(SEED_RANGES.find(r => r.platKey === SEED_RANGE_DEFAULT)),
   };
@@ -906,10 +1220,12 @@ function applyI18n() {
   });
   buildOptions();
   spellHint();      // 公式提示
-  bookHint();       // Boss 戰按鈕文字（內含 repaintTrace，資訊列跟著換語言）
+  modeSync();       // 按鈕文字與連框長度（內含 repaintTrace，資訊列跟著換語言）
   if (!document.getElementById('tr_grid')) {
     document.getElementById('tr_tri_info').innerHTML = triHint();
   }
+  // 說明彈窗開著時，換語言要重建裡面的表
+  if (!document.getElementById('ib_modal').hidden) buildInBattleInfo();
 }
 
 // 需要帶入數字或翻譯的下拉選項統一在這裡產生
@@ -940,6 +1256,20 @@ function buildOptions() {
   fill('tr_normal', nums(BT_NORMAL_RATES));
   fill('tr_books',  nums(rounds));
 
+  // 雜魚戰條件
+  const upto = (n, from) => Array.from({ length: n }, (_, i) => [i + (from || 0),
+                                                                String(i + (from || 0))]);
+  fill('zk_field',    Object.keys(ZK_FIELDS).map(k => [k, t(ZK_FIELDS[k].nameKey)]));
+  fill('zk_groups',   Array.from({ length: ZK_MAX_GROUPS },
+                                 (_, i) => [i + 1, t('zk.groupN', { n: i + 1 })]));
+  fill('zk_enemies',  upto(ZK_MAX_ENEMIES, 1));
+  fill('zk_shigusa',  upto(PARTY_MAX + 1));
+  fill('zk_inbattle', upto(ZK_MAX_INBATTLE + 1));
+  fill('zk_quest', [['none', t('zk.questNone')], ['flee', t('zk.questFlee')]].concat(
+    ZK_QUESTS.map((q, i) => [i, t('zk.questOption', {
+      id: q.id, name: q.name, thr: q.thr,
+      kind: q.kind ? t('zk.kind.' + q.kind) : '' })])));
+
   fill('hs_spell', SPELLS.map((sp, i) => [i, t('hs.option',
         { name: t(sp.key), base: sp.base, m: sp.m, steps: sp.steps })]));
   fill('hs_range', SEED_RANGES.map(r => [rangeValue(r),
@@ -958,13 +1288,10 @@ function buildCastButtons() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  核心 LCG — 全程 BigInt，不碰 Number，避免精度截斷
-//  64-bit Number 只有 53-bit 有效位數，0x5D588B656C078965 本身
-//  就是 63-bit，乘法後必然爆精度，所以 BigInt 是唯一正確做法
+//  核心 LCG — 全程 BigInt。乘數是 63-bit，Number 只有 53-bit 有效位，必爆精度。
 // ═══════════════════════════════════════════════════════════════
 const LCG_MULT = 0x5d588b656c078965n;
 const LCG_ADD  = 0x269ec3n;
-
 const LCG_MASK = 0xFFFFFFFFFFFFFFFFn;
 
 function lcgNext(seed) {
@@ -974,33 +1301,21 @@ function lcgNext(seed) {
 // 取高 32-bit → [0, 2³²-1]；轉 Number 安全 (32bit < 2⁵³)
 function hi32(seed) {return Number(seed >> 32n); }
 
-// 取低 32-bit
-function lo32(seed) {return Number(seed & 0xFFFFFFFFn); }
-
 // 高 32-bit 轉百分比 [0, 100)
 function toPercent(seed) {return hi32(seed) / 4294967296 * 100; }
 
 // ═══════════════════════════════════════════════════════════════
-//  Boss 戰掉寶判定規則 —— 單一真相來源
-//  一次 Boss 戰消耗 15 個亂數，順序固定：
-//      A B x1 │ C D x2 │ E F x3 │ G H x4 │ I J x5
-//    A/C/E/G/I = 第 1～5 次「稀有掉寶」判定
-//    B/D/F/H/J = 第 1～5 次「普通掉寶」判定
-//    x1        = 100% 掉寶（恆計入）；x2～x5 被消耗但與判定無關
-//  第 2 次判定起（C/D 開始）受盜賊秘傳書限制，門檻降 1%。
-//
-//  兩個容易被混用的概念，這裡分開定義：
-//    drop  = 遊戲實際掉不掉寶。只由稀有／普通掉寶率決定；選「不限」時
-//            沒有已知門檻，退回最寬的 15% / 25%。用於「合計掉寶」、
-//            結果格線上色、RNG Trace 連框上色。
-//    match = 符不符合使用者設的搜尋條件。普通掉寶選「不限」＝不篩。
-//            只決定搜尋停在哪裡，不會改變 drop。
+//  Boss 戰掉寶判定 —— 單一真相來源
+//  一次 15 個亂數：A B x1 │ C D x2 │ E F x3 │ G H x4 │ I J x5
+//    A/C/E/G/I 稀有、B/D/F/H/J 普通、x1 恆掉、x2～x5 消耗但無關
+//    第 2 次判定起門檻降 1%（盜賊秘傳書）
+//  drop  = 遊戲實際掉不掉。「不限」退回最寬的 15%／25%。用於合計、格線與連框上色。
+//  match = 符不符合搜尋條件。普通掉寶「不限」＝不篩。只決定搜尋停哪，不動 drop。
 // ═══════════════════════════════════════════════════════════════
 const BT_BOOK_OFFSET = 1;    // 盜賊秘傳書：第 2 次判定起門檻 −1%
 const BT_DROP_LIMIT  = 8;    // 一場戰鬥最多帶走 8 個掉寶，第 9 個起會消失
 
-// 掉寶率的可選值 —— 單一真相來源。B-Table 面板與 RNG Trace 的下拉選單都吃這裡，
-// 「不限」時退回的最寬門檻也直接取最大值，不會跟選項清單各走各的。
+// 掉寶率選項 —— 單一真相來源：兩個面板的下拉與「不限」的退回值都取這裡。
 const BT_RARE_RATES   = [2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const BT_NORMAL_RATES = [5, 10, 15, 20, 25];
 const BT_RARE_MAX     = Math.max(...BT_RARE_RATES);
@@ -1017,8 +1332,10 @@ const BT_ROUND_LEN  = 3;                      // 每次判定佔 3 個亂數：�
 BT_SLOTS.forEach((sl, i) => { sl.round = Math.floor(i / BT_ROUND_LEN); });   // 第幾次判定（0-based）
 const BT_LEN        = BT_SLOTS.length;
 const BT_ROUNDS     = BT_LEN / BT_ROUND_LEN;  // 一場 Boss 戰最多 5 次判定
-const BT_RARE_LATER = [3, 6, 9, 12];    // C E G I
-const BT_NORM_LATER = [4, 7, 10, 13];   // D F H J
+// 第 2 次判定起的稀有格（C E G I）與普通格（D F H J）
+const btLater = kind => BT_SLOTS.flatMap((sl, i) => sl.kind === kind && sl.round > 0 ? [i] : []);
+const BT_RARE_LATER = btLater('rare');
+const BT_NORM_LATER = btLater('normal');
 
 // 15 格各自的掉寶門檻（%）；tA / tB 傳 0 代表「不限」，x 格為 null
 function btThresholds(tA, tB) {
@@ -1043,14 +1360,6 @@ function btMatch(i, pct, thr, tB) {
   if (k !== 'rare' && k !== 'normal') return true;
   if (k === 'normal' && tB === 0)     return true;
   return pct < thr[i];
-}
-
-// 從 seed 展開 15 步的百分比
-function btPercents(seed) {
-  const out = new Array(BT_LEN);
-  let x = seed;
-  for (let i = 0; i < BT_LEN; i++) { x = lcgNext(x); out[i] = toPercent(x); }
-  return out;
 }
 
 // 合計掉寶數
@@ -1088,20 +1397,111 @@ function parseSeed(str) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  PANEL 0 : RNG Trace
-//  格狀顯示：桌面10欄、手機5欄，只顯示百分比小數後2位
-//  首次展開200步，可無限追加+200
+//  PANEL 0 : RNG Trace — 桌面 10 欄／手機 5 欄，首展 200 步，可續加 +200
 // ═══════════════════════════════════════════════════════════════
+const TR_BATCH  = 200;    // 每次展開／追加的步數
 let trCurSeed  = null;   // 目前展開到的 seed（BigInt）
 let trCurCount = 0;      // 已顯示步數
 let triStart   = null;   // 連框起始步數（1-based），null = 未選
 let trPos      = 0;      // 已消耗步數，下一步 = trPos + 1
 let advHistory = [];     // 推進紀錄，供「復原」退回上一步
 
-// 連框長度 = Boss 戰一次消耗的步數
-function triLen() { return bookSteps(); }
+// 判定模式：boss = Boss 掉寶窗，zako = 一場雜魚戰。
+// 兩者共用連框／上色／推進／復原，差別只在 frameSpec() 回傳的格位表。
+let TR_MODE = 'boss';
+const ZK_SEARCH_MAX  = 100000;   // 最多往前找幾次ホイミ
+const ZK_SEARCH_HITS = 20;       // 最多列出幾個結果
+
+// 判定窗的唯一定義。slots＝本窗全部格位（長度即窗長），at＝判定格位置。
+// 連框長度、明細、HP 標註、搜尋落點全部取自這裡。
+function frameSpec() {
+  if (TR_MODE === 'zako') {
+    const slots = zkSlots();
+    return {
+      slots,
+      at:    slots.findIndex(sl => sl.test),
+      label: k => slots[k] ? t(slots[k].key, slots[k].p) : '',
+      hit:   (k, pct) => zkPass(slots[k], pct) ? ' hit ' + slots[k].cls : '',
+    };
+  }
+  // 窗長跟秘傳書走，必須切片；回傳整份 BT_SLOTS 會讓 slots.length 對不上窗長。
+  const slots = BT_SLOTS.slice(0, bookSteps());
+  const thr = btThresholds(parseFloat(document.getElementById('tr_rare').value),
+                           parseFloat(document.getElementById('tr_normal').value));
+  return {
+    slots,
+    at:    -1,
+    label: k => slots[k] ? slots[k].name : '',
+    hit:   (k, pct) => {
+      const kind = slots[k].kind;
+      if (kind !== 'rare' && kind !== 'normal') return '';
+      if (!btDrop(k, pct, thr)) return '';
+      return kind === 'rare' ? ' hit hit-rare' : ' hit hit-normal';
+    },
+  };
+}
+
+// 連框長度 = 判定窗的格數
+function triLen() { return frameSpec().slots.length; }
+
+// 人數 1 時消耗 0，跟明細裡看不到 しぐさ 這件事要一起講
+function zkSoloNote() {
+  return zkConditions().party === 1 ? '　' + t('zk.shigusaSolo') : '';
+}
+
 function triHint() {
-  return t('tr.frameHint', { len: triLen() });
+  if (TR_MODE !== 'zako') return t('tr.frameHint', { len: triLen() });
+  const j   = zkConditions().judge;
+  const key = j === 'flee' ? 'zk.frameHintFlee' : (j ? 'zk.frameHint' : 'zk.frameHintNoQuest');
+  return t(key, { len: triLen(), parts: zkBreakdown() }) + zkSoloNote();
+}
+
+// 分組 → 明細標籤。分組本身寫在格位上（sl.g）。
+const ZK_GROUP_LABEL = {
+  enc: 'zk.role.enc', hp: 'zk.enemies', shigusa: 'zk.shigusa',
+  inbattle: 'zk.inBattle', quest: 'zk.role.quest', flee: 'zk.fleeGroup',
+};
+
+// 明細從 zkSlots() 推導：連續同組併段，順序恆等於實際取值順序。
+function zkBreakdown() {
+  const runs = [];
+  for (const sl of zkSlots()) {
+    if (runs.length && runs[runs.length - 1][0] === sl.g) runs[runs.length - 1][1]++;
+    else runs.push([sl.g, 1]);
+  }
+  return runs.map(([g, n]) => t(ZK_GROUP_LABEL[g]) + ' ' + n).join(' + ');
+}
+
+function toggleTraceMode() {
+  TR_MODE = (TR_MODE === 'zako') ? 'boss' : 'zako';
+  triStart = (triStart === null) ? null : trPos + 1;   // 換模式後窗長改變，重新對齊綠格
+  modeSync();
+  focusFrame();
+}
+
+// 每組至少一隻，故敵數 ≥ 組數。不合法的選項禁用，值低於下限則頂上去。
+function zkClampEnemies() {
+  const min = parseInt(document.getElementById('zk_groups').value);
+  const sel = document.getElementById('zk_enemies');
+  [...sel.options].forEach(o => { o.disabled = parseInt(o.value) < min; });
+  if (parseInt(sel.value) < min) sel.value = String(min);
+}
+
+// 模式或條件改變後，把按鈕文字、標籤、連框長度一次同步
+function modeSync() {
+  zkClampEnemies();
+  const modal = document.getElementById('tr_modal');
+  if (modal) modal.className = 'modal mode-' + TR_MODE;
+  const zako = TR_MODE === 'zako';
+  document.getElementById('tr_mode_btn').textContent   = t(zako ? 'tr.modeZako' : 'tr.modeBoss');
+  document.getElementById('tr_frame_label').textContent = t(zako ? 'tr.modeZako' : 'tr.modeBoss');
+  const adv = document.getElementById('tr_advbook');
+  adv.textContent = '+' + triLen();
+  adv.title       = t(zako ? 'tr.zakoTitle' : 'tr.bossTitle');
+  document.getElementById('tr_zk_info').innerHTML = '';   // 條件變了，舊搜尋結果就不作數
+  const need = triStart === null ? 0 : triStart + triLen() - 1;
+  while (need > trCurCount && document.getElementById('tr_grid')) { doTrace(true); }
+  repaintTrace();
 }
 
 function doTrace(isAppend) {
@@ -1128,8 +1528,7 @@ function doTrace(isAppend) {
   const grid = document.getElementById('tr_grid');
   if (!grid) return;
 
-  const BATCH = 200;
-  for (let i = 0; i < BATCH; i++) {
+  for (let i = 0; i < TR_BATCH; i++) {
     trCurSeed = lcgNext(trCurSeed);
     trCurCount++;
     const n   = trCurCount;                    // 固定本圈步數供 closure 使用
@@ -1139,9 +1538,11 @@ function doTrace(isAppend) {
     cell.dataset.pct = raw;                    // 顯示只到小數 2 位，比門檻要用完整精度
     cell.innerHTML = `<span class="tc-idx">${n}</span><span class="tc-val">${raw.toFixed(2)}%</span>`;
     cell.addEventListener('click', () => {
+      advHistory.push({ pos: trPos, tri: triStart });   // 點格子也是一次位置變更，可復原
       if (triStart === n) { triStart = null; }  // 再點同一格 = 取消連框
       else { trPos = n - 1; triStart = n; }     // 位置移到這一格，綠格就是連框第一格
       repaintTrace();
+      undoHint();
     });
     grid.appendChild(cell);
   }
@@ -1162,7 +1563,11 @@ function closeTrace() {
 
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('tr_modal').hidden) return;
-  if (e.key === 'Escape') { closeTrace(); return; }
+  if (e.key === 'Escape') {
+    // 說明彈窗疊在最上層，Esc 先關它
+    if (!document.getElementById('ib_modal').hidden) { closeInBattleInfo(); return; }
+    closeTrace(); return;
+  }
   // Backspace 復原上一次推進；焦點在輸入框或選單裡就讓它照原本的用途走
   if (e.key === 'Backspace' && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) {
     e.preventDefault();
@@ -1178,19 +1583,13 @@ window.addEventListener('resize', () => {
   trResizeRaf = requestAnimationFrame(repaintTrace);
 });
 
-// ── 消耗 RNG：+1 ホイミ等 / +4 ベホマラー / +8 ベホマズン / +(3+秘傳書×3) 討伐 ──
+// 推進按鈕：TR_CASTS 的施法鈕 + 一整個判定窗
 const advButtons = () => TR_CASTS.map(c => document.getElementById('tr_adv' + c.steps))
                                  .concat(document.getElementById('tr_advbook'));
 
-// 一次討伐消耗 3 步，每持有 1 本盜賊秘傳書再多 3 步
+// Boss 戰：基本 1 次判定，每本盜賊秘傳書多 1 次；一次判定 = BT_ROUND_LEN 格
 function bookSteps() {
-  // 基本 1 次判定，每持有 1 本盜賊秘傳書再多 1 次；一次判定 = BT_ROUND_LEN 個亂數
   return (parseInt(document.getElementById('tr_books').value) + 1) * BT_ROUND_LEN;
-}
-
-function bookHint() {
-  document.getElementById('tr_advbook').textContent = '+' + bookSteps();
-  repaintTrace();   // 連框長度跟著改，立即重畫
 }
 
 function advance(n) {
@@ -1198,8 +1597,7 @@ function advance(n) {
   advHistory.push({ pos: trPos, tri: triStart });   // 推進前的完整狀態，復原時整組還原
   trPos += n;
 
-  // 連框永遠從「下一步」起算 —— 綠格就是連框最左邊那一格，
-  // 框住的正是「現在去打，這場 Boss 戰會怎麼判定」。
+  // 連框恆從「下一步」起算：綠格＝連框第一格，框住的就是「現在去打會如何」。
   triStart = trPos + 1;
 
   // 游標與整個連框都要落在已展開的範圍內
@@ -1209,6 +1607,75 @@ function advance(n) {
   undoHint();
   focusFrame();
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  戰鬥中推進 B-Table 的動作 —— 單一真相來源。「戰鬥中消耗」＝實際發生過的加總。
+//  ok=false ＝社群回報但未證實，表格會標出。
+// ═══════════════════════════════════════════════════════════════
+const IB_ACTIONS = [
+  { id: 'scout', cost: '1',       ok: true  },
+  { id: 'flee',  cost: '1',       ok: true  },
+  { id: 'coup',  cost: PARTY_MAX, ok: true  },
+  { id: 'call',  cost: '1',       ok: true  },
+  { id: 'ally',  cost: '1',       ok: false },
+  { id: 'medit', cost: '2 ?',     ok: false },
+  { id: 'item',  cost: '0',       ok: true  },
+];
+
+function buildInBattleInfo() {
+  const rows = IB_ACTIONS.map(a =>
+    `<tr><td class="ib-name">${t('ib.' + a.id + '.name')}</td>` +
+    `<td class="ib-cost">${a.cost}</td>` +
+    `<td>${t('ib.' + a.id + '.note', { cost: a.cost })}` +
+    (a.ok ? '' : ` <span class="bad">${t('ib.unverified')}</span>`) + `</td></tr>`).join('');
+  document.getElementById('ib_body').innerHTML =
+    `<table class="info-table"><thead><tr>` +
+    `<th>${t('ib.colAction')}</th><th style="text-align:center">${t('ib.colCost')}</th>` +
+    `<th>${t('ib.colNote')}</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="info-note">${t('ib.footer')}</div>`;
+}
+
+function openInBattleInfo() {
+  buildInBattleInfo();
+  document.getElementById('ib_modal').hidden = false;
+}
+function closeInBattleInfo() { document.getElementById('ib_modal').hidden = true; }
+
+// 雜魚戰搜尋：再施幾次ホイミ去打，quest 判定格才成立。
+// 判定格絕對格號 = trPos + k + at + 1。
+function zkSearch() {
+  const info = document.getElementById('tr_zk_info');
+  const spec = frameSpec();
+  const at   = spec.at;
+  // 判定格自帶門檻；沒有判定格就沒得搜（逃跑時搜的是「第 1 次就逃掉」）
+  if (at < 0) { info.innerHTML = `<span class="dim">${t('zk.needQuest')}</span>`; return; }
+
+  let seed;
+  try { seed = parseSeed(document.getElementById('tr_seed').value || '0'); }
+  catch (e) { info.innerHTML = `<span class="bad">${t('common.seedError')}</span>`; return; }
+
+  let cur = seed;
+  for (let i = 0; i < trPos + at + 1; i++) cur = lcgNext(cur);   // k = 0 的判定格
+
+  const hits = [];
+  for (let k = 0; k <= ZK_SEARCH_MAX && hits.length < ZK_SEARCH_HITS; k++) {
+    if (zkPass(spec.slots[at], toPercent(cur))) hits.push(k);
+    cur = lcgNext(cur);
+  }
+  if (!hits.length) {
+    info.innerHTML = `<span class="bad">${t('zk.noHits', { max: ZK_SEARCH_MAX })}</span>`;
+    return;
+  }
+  const links = hits.map(k =>
+    `<a href="#" onclick="zkJump(${trPos + k});return false;">` +
+    t('zk.hitItem', { k, cell: trPos + k + at + 1 }) + '</a>');
+  const j = zkConditions().judge;
+  info.innerHTML = t('zk.hits', { n: hits.length, list: links.join('　'),
+                                  id: j === 'flee' ? t('zk.fleeGroup') : t('zk.questTag', { id: j.id }) });
+}
+
+// 點搜尋結果：位置移過去，判定窗自動對齊綠格
+function zkJump(pos) { advance(pos - trPos); }
 
 // 退回上一次推進：位置與連框整組還原成推進前的樣子
 function undoAdvance() {
@@ -1226,7 +1693,8 @@ function undoHint() {
   const btn  = document.getElementById('tr_undo');
   const last = advHistory[advHistory.length - 1];
   btn.disabled    = !last;
-  btn.textContent = last ? `⌫ −${trPos - last.pos}` : '⌫';
+  const d = last ? last.pos - trPos : 0;      // 復原會移動的格數
+  btn.textContent = last ? `⌫ ${d > 0 ? '+' : '−'}${Math.abs(d)}` : '⌫';
 }
 
 // 捲到連框中央（沒開連框就對準游標），不用來回找最新位置
@@ -1239,19 +1707,24 @@ function focusFrame() {
   if (target) target.scrollIntoView({ block: 'center' });
 }
 
-// 重畫整個 grid：已消耗的格子轉灰、下一步加綠環、連框接成一個框。
-// 連框在同一列的相鄰格子會拆掉中間邊框並接上 gap；落在換行處則各自收邊，不拖出列尾。
+// 重畫 grid：已消耗轉灰、下一步加綠環、連框接成一框。
+// 同列相鄰格拆內邊框並接 gap，換行處各自收邊。
 function repaintTrace() {
   const grid = document.getElementById('tr_grid');
   const info = document.getElementById('tr_tri_info');
   const pos  = document.getElementById('tr_pos_info');
+  const hpEl = document.getElementById('tr_hp_info');
   if (!grid || !info || !pos) return;
+  if (hpEl) hpEl.innerHTML = '';   // 沒有連框就沒有 HP 明細
   const cells = grid.children;
+
+  // 判定窗只取一次，長度與判定格都從它來
+  const spec = frameSpec();
 
   // 先把連框成員與接邊算好，避免在寫 className 的迴圈裡讀 offsetTop 觸發重排
   const tri = [];
   if (triStart !== null) {
-    for (let k = 0; k < triLen(); k++) {
+    for (let k = 0; k < spec.slots.length; k++) {
       const c = cells[triStart - 1 + k];
       if (c) tri.push(c);
     }
@@ -1261,16 +1734,13 @@ function repaintTrace() {
     jn: !!(tri[k + 1] && tri[k + 1].offsetTop === c.offsetTop),
   }));
 
-  // 連框就是一次 Boss 戰的判定窗，直接套用共用的掉寶判定規則
-  const thr = btThresholds(parseFloat(document.getElementById('tr_rare').value),
-                           parseFloat(document.getElementById('tr_normal').value));
   let hitRare = 0, hitNorm = 0;
   const hits = tri.map((c, k) => {
-    const kind = BT_SLOTS[k].kind;
-    if (kind !== 'rare' && kind !== 'normal') return '';
-    if (!btDrop(k, parseFloat(c.dataset.pct), thr)) return '';
-    if (kind === 'rare') { hitRare++; return ' hit-rare'; }
-    hitNorm++; return ' hit-normal';
+    const h = spec.hit(k, parseFloat(c.dataset.pct));
+    if (h.includes('hit-rare'))        hitRare++;
+    else if (h.includes('hit-normal')) hitNorm++;
+    c.title = spec.label(k);      // 滑過格子看得到它在這場戰鬥裡的用途
+    return h;
   });
 
   for (let i = 0; i < cells.length; i++) {
@@ -1294,6 +1764,52 @@ function repaintTrace() {
                                   pct: nextCell.querySelector('.tc-val').textContent }) : '');
 
   if (tri.length === 0) { info.innerHTML = triHint(); return; }
+
+  if (TR_MODE === 'zako') {
+    // 每格 HP 抽樣對應一隻怪：HP = 基礎HP × (pct×0.002 + 0.8)，即 80～100%。
+    const hpItems = [];
+    spec.slots.forEach((sl, k) => {
+      if (sl.g !== 'hp' || !tri[k]) return;
+      hpItems.push(t('zk.hpItem', {
+        cell: triStart + k, n: hpItems.length + 1,
+        hp: (80 + parseFloat(tri[k].dataset.pct) * 0.2).toFixed(1) }));
+    });
+    if (hpEl) hpEl.innerHTML = hpItems.length ? t('zk.hpLine', { list: hpItems.join('　') }) : '';
+
+    // 逃跑：掃前三格，第一個低於門檻的就是成功那次；都沒中就是第 4 次必成
+    if (zkConditions().judge === 'flee') {
+      let win = 0, at = 0;
+      spec.slots.forEach((sl, k) => {
+        if (win || sl.g !== 'flee' || !tri[k]) return;
+        if (zkPass(sl, parseFloat(tri[k].dataset.pct))) { win = sl.p.n; at = k; }
+      });
+      // 前三次都沒中就是第 4 次必成，那一格是最後一格
+      if (!win && tri.length === spec.slots.length) {
+        win = ZK_FLEE_THR.length + 1;
+        at  = spec.slots.length - 1;
+      }
+      info.innerHTML = t('zk.frameLine', {
+        len: tri.length, from: triStart, to: triStart + tri.length - 1,
+        parts: zkBreakdown(),
+        judge: win ? t('zk.fleeWin', { n: win, cell: triStart + at }) : '',
+      }) + zkSoloNote();
+      return;
+    }
+
+    const at   = spec.at;
+    const cell = at >= 0 ? tri[at] : null;
+    info.innerHTML = t('zk.frameLine', {
+      len: tri.length, from: triStart, to: triStart + tri.length - 1,
+      parts: zkBreakdown(),
+      judge: cell ? t('zk.judgeCell', {
+                      cell: triStart + at,
+                      pct:  cell.querySelector('.tc-val').textContent,
+                      verdict: t(hits[at] ? 'zk.pass' : 'zk.fail') })
+                  : t('zk.noQuest'),
+    }) + zkSoloNote();
+    return;
+  }
+
   // 連框長時值列太長，格子本身已經看得到，就只留範圍
   const vals = tri.length <= 6
     ? '　' + tri.map(c => c.querySelector('.tc-val').textContent).join('　/　')
@@ -1306,10 +1822,17 @@ function repaintTrace() {
 // ═══════════════════════════════════════════════════════════════
 //  PANEL 1 : ホイミ Seed 逆推
 // ═══════════════════════════════════════════════════════════════
-// 回復手段參數（基本回復量 / 振れ幅 / 每次消耗的 RNG 步數）
+// 回復手段參數：基本回復量 / 振れ幅 / 每次消耗步數
 function spellParams() {
   const sp = SPELLS[Number(document.getElementById('hs_spell').value)];
   return { base: sp.base, m: sp.m, steps: sp.steps, name: t(sp.key) };
+}
+
+// 從 s 施一次回復：藥草先空轉，再取值。回傳 { s: 新狀態, val: 回復量 }
+// 回復量 = 基本回復量 + round(rng_hi32 × 振れ幅 / 2³²)
+function castHeal(s, base, mB, steps) {
+  for (let k = 0; k < steps; k++) s = lcgNext(s);
+  return { s, val: base + Number(((s >> 32n) * mB + 0x80000000n) >> 32n) };
 }
 
 function spellHint() {
@@ -1346,11 +1869,9 @@ function doSeedSearch() {
       let ok = true;
 
       for (let j = 0; j < seq.length; j++) {
-        for (let k = 1; k < steps; k++) { s = lcgNext(s); }   // 藥草：先空轉 1 步
-        s = lcgNext(s);                                       // 取值步
-        // 回復量 = 基本回復量 + round(rng_hi32 × 振れ幅 / 2³²)
-        const val = base + Number(((s >> 32n) * mB + 0x80000000n) >> 32n);
-        if (val !== seq[j]) { ok = false; break; }
+        const r = castHeal(s, base, mB, steps);
+        s = r.s;
+        if (r.val !== seq[j]) { ok = false; break; }
       }
 
       if (ok) results.push(i);
@@ -1362,8 +1883,8 @@ function doSeedSearch() {
         results.map(r => seedLine(r)).join('\n');
     } else {
       out.innerHTML = `<span class="bad">${t('hs.notFound', {
-          from: minSeed.toString(16).toUpperCase(),
-          to:   maxSeed.toString(16).toUpperCase(), ms })}</span>\n\n` + t('hs.hint');
+          from: hexUp(minSeed),
+          to:   hexUp(maxSeed), ms })}</span>\n\n` + t('hs.hint');
     }
   }, 30);
 }
@@ -1382,18 +1903,16 @@ function doVerify() {
   let rows = [];
   let s = seed;
   for (let i = 0; i < STEPS; i++) {
-    for (let k = 1; k < steps; k++) { s = lcgNext(s); }   // 藥草：先空轉 1 步
-    s = lcgNext(s);
-    const rngHi = s >> 32n;
-    const val   = base + Number((rngHi * mB + 0x80000000n) >> 32n);
+    const r = castHeal(s, base, mB, steps);
+    s = r.s;
     rows.push(
       `  <span class="dim">#${i+1}</span>` +
-      `  <span class="hi">${val}</span>` +
-      `  <span class="dim">(hi32 = ${(Number(rngHi)/4294967296*100).toFixed(6)}%)</span>`
+      `  <span class="hi">${r.val}</span>` +
+      `  <span class="dim">(hi32 = ${toPercent(s).toFixed(6)}%)</span>`
     );
   }
   out.innerHTML =
-    `<span class="dim">${t('hs.verifyHead', { seed: seed.toString(16).toUpperCase(), name, n: STEPS })}</span>
+    `<span class="dim">${t('hs.verifyHead', { seed: hexUp(seed), name, n: STEPS })}</span>
 
 ` +
     rows.join('\n');
@@ -1422,27 +1941,144 @@ function seedHint(inputId, hintId) {
 // 格式化單行 seed 結果（含平台標籤）
 function seedLine(n) {
   const p = platformInfo(n);
-  return `  <span class="hi">0x${n.toString(16).toUpperCase().padStart(4,'0')}</span>` +
+  return `  <span class="hi">0x${hexUp(n)}</span>` +
          `  <span class="dim">(dec ${n})</span>` +
          `  <span style="color:${p.color};font-size:.9em">${p.label}</span>`;
 }
 
-
+// ═══════════════════════════════════════════════════════════════
+//  雜魚戰判定 —— 單一真相來源
+//  消耗 = 遭遇 + 敵數(HP) + しぐさ + 戰鬥中 + quest(0 或 1)
+//  しぐさ：1 人 0、2 人以上人數分
 //
-//  15個亂數順序：A B x C D x E F x G H x I J x
-//  A = 第1稀有判定，B = 第1普通判定
-//  C/E/G/I = 第2/3/4/5稀有，D/F/H/J = 第2/3/4/5普通
-//  x = 被消耗但與判定無關
-//  第2-5個判定閾值 = 主條件 - 1%（盜賊秘傳書固定效果）
+//  遭遇取值順序（反編譯 FUN_0209cd4c 地上／FUN_0209d1c0 海上）：
+//      1 組  1G數 → お供判定
+//      2 組  1G數 → お供判定 → 2G種類 → 2G數 → 交換
+//      3 組  1G數 → お供判定 → 2G種類 → 2G數 → 3G種類 → 3G數 → 交換
+//  交換：2 組 getPercent(_,2)（非 0 則對調第 1、2 組），3 組 getPercent(_,6)。
+//  海上整組由 A-Table 決定，B-Table 只被消耗。
+//
+//  quest 判定固定 1 格、落在最後，且僅在有對象怪且前置條件成立時消耗
+//  （例：121 沒裝きせきの剣完全不推進）。一般掉寶判定不佔格。
+//
+//  遭遇從 F0（現在格）起算；しぐさ 判定在「敵グループ・敵数」之後，即排在 HP 之後
+//  （DaisukeDaisuke 回覆）。順序錯，HP 明細就標錯格。
+//  https://daisukedaisuke.hatenablog.com/entry/2024/06/07/120021
 // ═══════════════════════════════════════════════════════════════
+const ZK_FIELDS = {
+  // 地上格數由 zkEncRoles() 的取值順序長出來，不另記數字（會變第二真相來源）。
+  land: { nameKey: 'zk.land' },
+  // 海上整組由 A-Table 決定，B-Table 只是被消耗，沒有可推導的結構，只能記數。
+  sea:  { nameKey: 'zk.sea', base: [1, 2, 2] },
+};
+const ZK_MAX_GROUPS  = ZK_FIELDS.sea.base.length;   // 海上表按組數索引，長度即組數上限
+const ZK_MAX_ENEMIES = 5;    // 開場在場上限（DaisukeDaisuke：フィールド上の上限は一律5体）
+const ZK_MAX_INBATTLE = 12;  // しらべる×n / 超必殺技 4 / 叫同伴每隻 1（キングスライム合體前可叫滿 8 隻）
+
+// 遭遇每格的用途 —— 「消耗幾格、順序如何」的唯一定義，總格數＝陣列長度。
+function zkEncRoles(field, groups) {
+  if (field === 'sea') {
+    return Array(ZK_FIELDS.sea.base[groups - 1]).fill(0).map(() => ({ key: 'zk.role.sea' }));
+  }
+  // 用序數而非 1G／2G：組數欄的「1 組」是總數，混用會被讀成「只有這隻怪」。
+  const roles = [{ key: 'zk.role.count1g' }, { key: 'zk.role.comp' }];
+  for (let g = 2; g <= groups; g++) {
+    roles.push({ key: 'zk.role.kindN', p: { n: g } }, { key: 'zk.role.countN', p: { n: g } });
+  }
+  if (groups > 1) roles.push({ key: 'zk.role.swap' });
+  return roles;
+}
+
+// 逃跑：第 n 次にげる的門檻，低於即成功；第 4 次必成（仍消耗 1 格）。
+// 逃不掉的戰鬥與敵人先制時完全不推進，那種情況不要選這個條件。
+const ZK_FLEE_THR = [25, 50, 75];
+
+// quest 門檻。thr = 該格百分比須「小於」此值才成立。
+// kind：drop 掉寶系／event 戰後事件系 —— 機制相同，只是預期畫面不同；未標＝來源沒分類。
+// 044 是唯一機制例外：推進 2 格、用第 2 格、比較方向為「大於等於」。
+const ZK_QUESTS = [
+  { id:'018', name:'ぼくらのかわいいペット',   thr:50, kind:'event' },
+  { id:'028', name:'デザートクラブ',           thr:50, kind:'drop'  },
+  { id:'029', name:'ゴールドメッキマン',       thr:10 },
+  { id:'031', name:'ボクのアイドル',           thr:15, kind:'drop'  },
+  { id:'033', name:'おどる大先生',             thr:20, kind:'event' },
+  { id:'041', name:'おしゃれスライム',         thr:5  },
+  { id:'042', name:'しわくちゃの手紙',         thr:15, kind:'drop'  },
+  // 門檻 90 不是 90.476：後者只是最低觀測成功值(95/105)，實測夾擊 (88.679, 90.476]。
+  // 取 90.476 會把 90～90.475 判成偽陰性。
+  { id:'044', name:'マダムのあかし',           thr:90, steps:2, use:2, ge:true },
+  { id:'045', name:'消えたテスト用紙',         thr:15, kind:'drop'  },
+  { id:'050', name:'シスターのざんげ',         thr:10, kind:'drop'  },
+  { id:'053', name:'ようがんまじんの手形',     thr:10, kind:'drop'  },
+  { id:'054', name:'ゴードンヘッドのスタンプ', thr:10, kind:'drop'  },
+  { id:'056', name:'ビーン 愛のメモリー',      thr:20 },
+  { id:'057', name:'俺の恋人ポリーヌ',         thr:10 },
+  { id:'062', name:'しかばねのきおく',         thr:20, kind:'drop'  },
+  { id:'064', name:'思い出のバッジ',           thr:20 },
+  { id:'067', name:'短剣ドロボーを追え',       thr:30 },
+  { id:'069', name:'ワシのコリをほぐして',     thr:30 },
+  { id:'070', name:'ワシのコシを治して',       thr:10 },
+  { id:'073', name:'ムチをたのむ',             thr:30 },
+  { id:'077', name:'つめたいのがお好き',       thr:10 },
+  { id:'079', name:'オラのオノ',               thr:10 },
+  { id:'081', name:'ハンマーチャンス！',       thr:10 },
+  { id:'086', name:'それいけ！洞くつ探検隊',   thr:5  },
+  { id:'121', name:'もふもふ雲',               thr:30, kind:'drop'  },
+  { id:'156', name:'宿王グランプリ迫る！',     thr:12.5 },   // 1/8，唯一的非整數門檻
+  { id:'167', name:'キレイに　なるピ！',       thr:10, kind:'drop'  },
+];
+
+// 讀取雜魚戰的搜尋條件
+function zkConditions() {
+  const q = document.getElementById('zk_quest').value;
+  return {
+    field:    document.getElementById('zk_field').value,
+    groups:   parseInt(document.getElementById('zk_groups').value),
+    enemies:  parseInt(document.getElementById('zk_enemies').value),
+    // 欄位填的是人數；1 人消耗 0、2 人以上消耗人數分（DaisukeDaisuke）
+    party:    parseInt(document.getElementById('zk_shigusa').value),
+    shigusa:  (n => n === 1 ? 0 : n)(parseInt(document.getElementById('zk_shigusa').value)),
+    inBattle: parseInt(document.getElementById('zk_inbattle').value),
+    // 判定條件：null 不判定／'flee' 逃跑／否則是 ZK_QUESTS 的一筆
+    judge:    q === 'none' ? null : (q === 'flee' ? 'flee' : ZK_QUESTS[parseInt(q)]),
+  };
+}
+
+// 一場雜魚戰的每一格：{ g 分組, key/p 用途文字, test 判定格, thr/ge 門檻, cls 命中色 }
+function zkSlots() {
+  const c = zkConditions();
+  const slots = [];
+  zkEncRoles(c.field, c.groups).forEach(r => slots.push(Object.assign({ g: 'enc' }, r)));
+  // 每出現一隻怪就抽一格決定牠的實際 HP：floor(基礎HP × rand(0.8,1.0) + 0.5)
+  for (let i = 0; i < c.enemies;  i++) slots.push({ g: 'hp',       key: 'zk.role.hp' });
+  for (let i = 0; i < c.shigusa;  i++) slots.push({ g: 'shigusa',  key: 'zk.role.shigusa' });
+  for (let i = 0; i < c.inBattle; i++) slots.push({ g: 'inbattle', key: 'zk.role.inbattle' });
+  if (c.judge === 'flee') {
+    // 最多 4 次。前三次各有門檻，第 4 次必成，所以只有前三次要上色。
+    ZK_FLEE_THR.forEach((thr, i) => slots.push({
+      g: 'flee', key: 'zk.role.flee', p: { n: i + 1 },
+      thr, cls: 'hit-flee' + (i + 1), test: i === 0 }));
+    slots.push({ g: 'flee', key: 'zk.role.flee4' });
+  } else if (c.judge) {
+    const q = c.judge, steps = q.steps || 1, use = q.use || 1;
+    for (let i = 1; i <= steps; i++) {
+      slots.push({ g: 'quest', key: 'zk.role.quest',
+                   test: i === use, thr: q.thr, ge: q.ge, cls: 'hit-rare' });
+    }
+  }
+  return slots;
+}
+
+// 格位自帶門檻，quest 與逃跑共用同一個比較（044 為「大於等於」）
+function zkPass(slot, pct) {
+  if (!slot || slot.thr === undefined) return false;
+  return slot.ge ? (pct >= slot.thr) : (pct < slot.thr);
+}
 
 // ═══════════════════════════════════════════════════════════════
-//  搜尋游標與預算 —— 單一真相來源
-//  「最大ホイミ次數」是總預算，不是每次搜尋各自的額度：
-//    「搜尋」        → reset()，從頭開始
-//    「搜尋下一個」  → 從 seed 接續，只能再花 budget() 步
-//    「搜尋掉寶≥N」  → 同上
-//  三個按鈕共用同一份記帳，回報的絕對次數不可能超過使用者設的上限。
+//  搜尋游標與預算 —— 單一真相來源。「最大ホイミ次數」是總預算，不是每次的額度：
+//  「搜尋」reset()；「搜尋下一個」「搜尋掉寶≥N」接續，只能再花 budget() 步。
+//  三個按鈕共用記帳，回報的絕對次數不會超過上限。
 // ═══════════════════════════════════════════════════════════════
 const btCursor = {
   seed: null,   // 下次從這個 seed 開始（BigInt）；null = 尚未搜尋過
@@ -1462,6 +2098,32 @@ const btCursor = {
   },
 };
 
+// 從 start 起逐步展開 15 格，A／B 不符合就跳過；accept(pct) 回傳非 null 即命中。
+function btScan(start, remain, THR, tB, accept) {
+  let cur = start;
+  for (let step = 0; step <= remain; step++) {
+    let x = cur;
+    x = lcgNext(x); const pA = toPercent(x);
+    x = lcgNext(x); const pB = toPercent(x);
+    // 主條件先擋掉，絕大多數位置不必展開剩下 13 步
+    if (btMatch(0, pA, THR, tB) && btMatch(1, pB, THR, tB)) {
+      const pct = [pA, pB];
+      for (let i = 2; i < BT_LEN; i++) { x = lcgNext(x); pct.push(toPercent(x)); }
+      const extra = accept(pct);
+      if (extra) return Object.assign({ found: step, pct, curSeed: cur }, extra);
+    }
+    cur = lcgNext(cur);
+  }
+  return null;
+}
+
+// 寫結果時保住捲動位置，不讓頁面跳動
+function setOutKeepScroll(el, html) {
+  const sy = window.scrollY;
+  el.innerHTML = html;
+  window.scrollTo(0, sy);
+}
+
 // B-Table 搜尋條件 —— 單一真相來源：兩個搜尋按鈕都從這裡讀
 function readBtConditions() {
   const reqMRaw  = document.getElementById('bt_m').value;
@@ -1470,7 +2132,7 @@ function readBtConditions() {
   return {
     tA:       parseInt(document.getElementById('bt_a').value),   // 0 = 不限（btThresholds 會退回最寬值）
     tB:       parseInt(document.getElementById('bt_b').value),   // 0 = 不限
-    maxSt:    parseInt(document.getElementById('bt_steps').value) || 100000,
+    maxSt:    parseInt(document.getElementById('bt_steps').value) || selectDefaults().bt_steps,
     isConsec,
     consecLv: isConsec ? parseInt(reqMRaw.slice(6)) : 0,
     reqM:     (!isConsec && reqMRaw !== 'any') ? parseInt(reqMRaw) : -1,
@@ -1497,68 +2159,32 @@ function doBTSearch(isContinue) {
 
   const { tA, tB, maxSt, isConsec, consecLv, reqM, reqN } = readBtConditions();
 
-  { const sy = window.scrollY; out.innerHTML = `<span class="dim">${t('common.searching')}</span>`; window.scrollTo(0, sy); }
+  setOutKeepScroll(out, `<span class="dim">${t('common.searching')}</span>`);
 
   setTimeout(() => {
-    let cur   = startSeed;
-    let found = -1;
-    let foundData = null;
-
-    const THR    = btThresholds(tA, tB);
-    const remain = btCursor.budget(maxSt);
-
-    for (let step = 0; step <= remain; step++) {
-      let t = cur;
-      t = lcgNext(t); const pA = toPercent(t);
-      t = lcgNext(t); const pB = toPercent(t);
-
-      // 主條件先擋掉，絕大多數位置不必展開剩下 13 步
-      if (!btMatch(0, pA, THR, tB) || !btMatch(1, pB, THR, tB)) { cur = lcgNext(cur); continue; }
-
-      const pct = [pA, pB];
-      for (let i = 2; i < BT_LEN; i++) { t = lcgNext(t); pct.push(toPercent(t)); }
-
+    const THR = btThresholds(tA, tB);
+    const d = btScan(startSeed, btCursor.budget(maxSt), THR, tB, pct => {
       const cntM = BT_RARE_LATER.filter(i => btMatch(i, pct[i], THR, tB)).length;
       const cntN = BT_NORM_LATER.filter(i => btMatch(i, pct[i], THR, tB)).length;
-
-      // CEGI 判定
-      let matchM;
-      if (isConsec) {
-        // 連續N：A 已通過，再確認 C / CE / CEG
-        matchM = true;
-        for (let k = 0; k < consecLv; k++) {
-          const i = BT_RARE_LATER[k];
-          matchM = matchM && btMatch(i, pct[i], THR, tB);
-        }
-      } else {
-        matchM = (reqM === -1) || (cntM === reqM);
-      }
-
+      // 連續 N：A 已通過，再確認 C / CE / CEG
+      const matchM = isConsec
+        ? BT_RARE_LATER.slice(0, consecLv).every(i => btMatch(i, pct[i], THR, tB))
+        : (reqM === -1) || (cntM === reqM);
       const matchN = (reqN === -1) || (cntN === reqN);
+      return (matchM && matchN) ? { cntM, cntN } : null;
+    });
 
-      if (matchM && matchN) {
-        found = step;
-        foundData = { pct, cntM, cntN, curSeed: cur };
-        break;
-      }
-
-      cur = lcgNext(cur);
-    }
-
-    if (found === -1) {
-      { const sy = window.scrollY;
-      out.innerHTML = `<span class="bad">${t('bt.notFound', { n: maxSt })}</span>\n\n` + t('bt.hint');
+    if (!d) {
       nextBtn.disabled = true;
-      window.scrollTo(0, sy); return; }
+      setOutKeepScroll(out, `<span class="bad">${t('bt.notFound', { n: maxSt })}</span>\n\n` + t('bt.hint'));
+      return;
     }
 
-    const absStep = btCursor.advance(found, foundData.curSeed);
+    const absStep = btCursor.advance(d.found, d.curSeed);
     nextBtn.disabled = false;
     document.getElementById('bt_overflow_btn').disabled = false;
 
-    const d = foundData;
-
-    const grid = btGridHtml(d.pct, btThresholds(tA, tB));
+    const grid = btGridHtml(d.pct, THR);
 
     const consecLabel = isConsec
       ? t('bt.consecLabel', { n: consecLv })
@@ -1566,14 +2192,12 @@ function doBTSearch(isContinue) {
     const nLabel = reqN === -1 ? t('bt.dfhjAny') : t('bt.dfhjCount', { n: d.cntN });
     const totalPass = grid.total;
 
-    { const sy = window.scrollY;
-    out.innerHTML =
+    setOutKeepScroll(out,
       `<span class="ok">${t('bt.found', { n: absStep })}  ${consecLabel}  ${nLabel}` +
       `  ${t('bt.totalDrops', { n: totalPass })}` +
       `${totalPass > BT_DROP_LIMIT ? ` <span class="bad">${t('bt.overLimit')}</span>` : ''}</span>` +
-      `  <span class="dim">(Seed: 0x${foundData.curSeed.toString(16).toUpperCase()})</span>\n\n` +
-      grid.html;
-    window.scrollTo(0, sy); }
+      `  <span class="dim">(Seed: 0x${hexUp(d.curSeed)})</span>\n\n` +
+      grid.html);
   }, 20);
 }
 
@@ -1587,66 +2211,37 @@ function doSearchOverflow() {
   // 這裡只看「合計掉寶超過上限」，不看 CEGI / DFHJ 的個數條件
   const { tA, tB, maxSt } = readBtConditions();
 
-  { const sy = window.scrollY; out.innerHTML = `<span class="dim">${t('bt.searchingOver')}</span>`; window.scrollTo(0, sy); }
+  setOutKeepScroll(out, `<span class="dim">${t('bt.searchingOver')}</span>`);
 
   setTimeout(() => {
-    let cur   = btCursor.seed;
-    let found = -1;
-    let foundData = null;
+    const THR = btThresholds(tA, tB);
+    const d = btScan(btCursor.seed, btCursor.budget(maxSt), THR, tB,
+                     pct => btDropCount(pct, THR) > BT_DROP_LIMIT ? {} : null);
 
-    const THR    = btThresholds(tA, tB);
-    const remain = btCursor.budget(maxSt);
-
-    for (let step = 0; step <= remain; step++) {
-      let t = cur;
-      t = lcgNext(t); const pA = toPercent(t);
-      t = lcgNext(t); const pB = toPercent(t);
-      if (!btMatch(0, pA, THR, tB) || !btMatch(1, pB, THR, tB)) { cur = lcgNext(cur); continue; }
-
-      const pct = [pA, pB];
-      for (let i = 2; i < BT_LEN; i++) { t = lcgNext(t); pct.push(toPercent(t)); }
-
-      if (btDropCount(pct, THR) > BT_DROP_LIMIT) {
-        found = step;
-        foundData = { pct, curSeed: cur };
-        break;
-      }
-      cur = lcgNext(cur);
-    }
-
-    if (found === -1) {
-      const sy = window.scrollY;
-      out.innerHTML = `<span class="bad">${t('bt.notFoundOver', { n: maxSt })}</span>`;
-      window.scrollTo(0, sy);
+    if (!d) {
+      setOutKeepScroll(out, `<span class="bad">${t('bt.notFoundOver', { n: maxSt })}</span>`);
       return;
     }
 
-    const absStep = btCursor.advance(found, foundData.curSeed);
+    const absStep = btCursor.advance(d.found, d.curSeed);
     nextBtn.disabled = false;
     ovBtn.disabled = false;
 
-    const grid = btGridHtml(foundData.pct, THR);
-
-    const sy = window.scrollY;
-    out.innerHTML =
+    const grid = btGridHtml(d.pct, THR);
+    setOutKeepScroll(out,
       `<span class="ok">${t('bt.foundOver', { n: absStep })}  ${t('bt.totalDrops', { n: grid.total })}` +
       ` <span class="bad">${t('bt.overLimit')}</span></span>` +
-      `  <span class="dim">(Seed: 0x${foundData.curSeed.toString(16).toUpperCase()})</span>
-
-` +
-      grid.html;
-    window.scrollTo(0, sy);
+      `  <span class="dim">(Seed: 0x${hexUp(d.curSeed)})</span>\n\n` +
+      grid.html);
   }, 20);
 }
 
 // 先把字典套到畫面：建立所有下拉選項、填入標籤與資訊列
 applyI18n();
-// 再明確寫回一次預設值，避免重整時被瀏覽器的表單狀態還原成上次的選擇。
-// 值同樣來自 selectDefaults()，不會跟建構選項時用的預設各走各的。
+// 再寫回一次預設值，防瀏覽器還原上次選擇。值同樣取自 selectDefaults()。
 const DEFAULTS = selectDefaults();
 for (const id in DEFAULTS) document.getElementById(id).value = String(DEFAULTS[id]);
-bookHint();
-
+modeSync();
 </script>
 </body>
 </html>
