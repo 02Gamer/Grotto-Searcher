@@ -27,7 +27,7 @@ Ultimate search
 - Fastest Floor Search (from entrance to Specified/Bugged floor)
 - Wandering Monster bugged floor status (ElistOfs)
 - Single monster floor (Only Monsters)
-- 4-player Multiplay Bug (Multibug)
+- 4-player Multiplay Bug (Multibug) - (New!) Fastest Floor Search supports it!
 - CPU Benchmark (💻)
 
 Chest Timer related search
@@ -95,7 +95,7 @@ Ultimate search
 - 乳首地図、イケない通路、危険？ハマるフロア など
 - マス目検索 (最短地図、最短フロア(オンリー最短はコレ)など)
 - 特殊フロア (敵無、敵減、オンリーなど)、特定モンスターのオンリー
-- 4人マルチによるバグ (マルチバグ)
+- 4人マルチによるバグ (マルチバグ) - (New!) 最短フロアと併せて検索できるようになった
 - CPUベンチマーク (💻)
 
 中断技 (アイテム地図) 検索
