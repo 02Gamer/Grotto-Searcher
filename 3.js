@@ -31,7 +31,7 @@ return Math.max(lo,Math.min(hi,want));
 function getWorkerCount(){
 try{
 const q=new URLSearchParams(window.location.search).get('workers');
-if(q){const n=parseInt(q);if(n>=1)return Math.min(n,256);}
+if(q){const n=parseInt(q,10);if(n>=1)return Math.min(n,256);}
 }catch{}
 if(typeof window.DQ9_WORKER_COUNT==='number'&&window.DQ9_WORKER_COUNT>=1)return Math.min(Math.floor(window.DQ9_WORKER_COUNT),256);
 return Math.max(1,Math.min(navigator.hardwareConcurrency||4,256));
@@ -316,6 +316,7 @@ if(groups===null)return null;
 if(groups.length===0)return mergeSolverShardPayloads(spec,[]);
 window._solverLastParallelDispatch={type,workers:pool.workers.length,shards:0,roots:0,totalRoots:groups.length};
 const payloads=[],waveWidth=Math.max(2,pool.workers.length*2);
+let limited=false;
 const counts=new Map(spec.spaces.map(sp=>[sp.key,{kept:new Map(),total:0,depths:new Map()}]));
 for(let start=0;start<groups.length;start+=waveWidth){
 const wave=groups.slice(start,start+waveWidth);
@@ -352,15 +353,18 @@ count.kept.set(depth,kept);
 }
 window._solverLastParallelDispatch.shards+=wave.length;
 window._solverLastParallelDispatch.roots+=wave.reduce((s,g)=>s+g.length,0);
-if(solverShardCapsFilled(spec,counts))break;
+if(solverShardCapsFilled(spec,counts)){limited=true;break;}
 }
-return mergeSolverShardPayloads(spec,payloads);
+const merged=mergeSolverShardPayloads(spec,payloads);
+merged.limited=merged.limited||limited;
+return merged;
 }
 function queueSolveTask(render,options,idBase,bucketBase,owner){
 const cacheKey=solverResultCacheKey(render,options);
 const cached=getCachedSolverResult(cacheKey,idBase,bucketBase);
 if(cached)return Promise.resolve(cached);
 if(solverBatUnreachable(render))return Promise.resolve(rebaseSolverCachedResult(setCachedSolverResult(cacheKey,solverBatUnreachableResult(),idBase,bucketBase),idBase,bucketBase));
+if(!options.metalGate&&solverMetalCompanionGated(render.monGroups,render.monId))return Promise.resolve(solverMetalGateResult());
 const oldPending=_solverResultPending.get(cacheKey);
 if(oldPending&&!oldPending.cancelled&&oldPending.gen===_siSolveGen){
 if(owner!=='probe')oldPending.owner='view';
@@ -374,7 +378,7 @@ window._solverResultCacheStats.misses++;
 const operation={gen:_siSolveGen,owner:owner==='probe'?'probe':'view',cancelled:false,stages:options.blockStages||new Map(),promise:null};
 _solverResultPending.set(cacheKey,operation);
 const common={lang:DISPLAY_LANG,dom:{si_useStats:!!options.useStats,si_multiPlayer:!!options.multiPlayer,si_blockFallback:!!options.blockFallback},chars:options.chars};
-let searchIncomplete=false;
+let searchIncomplete=false,searchLimited=false;
 const ensureCurrent=()=>{
 if(operation.cancelled||operation.gen!==_siSolveGen||_solverResultPending.get(cacheKey)!==operation)
 throw operation.error||makeSolverCancellationError('Solver generation changed');
@@ -382,10 +386,11 @@ throw operation.error||makeSolverCancellationError('Solver generation changed');
 const finalRender=async(extra)=>{
 ensureCurrent();
 const result=await queueSolverWorkerMessage(Object.assign({},common,{
-type:'solve',render,idBase,bucketBase,incomplete:searchIncomplete
+type:'solve',render,idBase,bucketBase,incomplete:searchIncomplete,limited:searchLimited
 },extra||{}),true,operation);
 ensureCurrent();
 (searchIncomplete||(searchIncomplete=!!result.incomplete));
+searchLimited=searchLimited||!!result.limited;
 return result;
 };
 const buildStage=async(kind,stage)=>{
@@ -426,7 +431,7 @@ if(result.needsKillAll==='r2'){
 const r2=await buildStage('killAll','r2');
 if(!r2)result=await finalRender({forceKillAll:true,initialFallback:isFallbackPath,prebuiltKillAll:null});
 else{
-const all=Object.assign({},killAllR1||{},r2,{r1:[],incomplete:!!((killAllR1==null?void 0:killAllR1.incomplete)||r2.incomplete)});
+const all=Object.assign({},killAllR1||{},r2,{r1:[],incomplete:!!((killAllR1==null?void 0:killAllR1.incomplete)||r2.incomplete),limited:!!(killAllR1&&killAllR1.limited||r2.limited)});
 result=await finalRender({forceKillAll:true,initialFallback:isFallbackPath,prebuiltKillAll:all,deferKillAll:false});
 }
 }
@@ -611,8 +616,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else start();
 })();
 const uiVal=(id)=>byId(id).value;
+Object.assign(i18nDict,{C17,C18});
 function refreshI18n(){
 document.querySelectorAll('[data-i18n]').forEach(el=>{
+if(el.onclick===requestSearchCancel)return;
 const key=el.getAttribute('data-i18n');
 let text=i18nDict[key];
 if(text){
@@ -639,7 +646,7 @@ for(const id of['si_sup1','si_sup2']){
 const sel=byId(id);
 if(sel)for(const o of sel.options)if(MONSTER_DB[o.value])o.textContent=getMonsterShieldName(o.value);
 }
-for(let b=1;b<=4;b++){const sel=byId('si_job'+b);if(sel)sel.querySelectorAll('option').forEach(o=>{const v=parseInt(o.value);if(!isNaN(v)&&VOC_STATS[v])o.textContent=DISPLAY_LANG==='EN'?VOC_STATS[v].en:VOC_STATS[v].jp;});}
+for(let b=1;b<=4;b++){const sel=byId('si_job'+b);if(sel)sel.querySelectorAll('option').forEach(o=>{const v=parseInt(o.value,10);if(!isNaN(v)&&VOC_STATS[v])o.textContent=DISPLAY_LANG==='EN'?VOC_STATS[v].en:VOC_STATS[v].jp;});}
 initSolverStatInputs();
 }
 function switchUILang(lang){
@@ -710,7 +717,7 @@ const USP_FAST_MODES={
 function getUltimateConds(){
 const getV=(id)=>{const el=byId(id);return el?el.value.trim():"";};
 const reqBox={};
-BOX_RANK_CHARS.forEach((ch,i)=>{reqBox[i+1]=parseInt(getV('cond_box_'+ch))||0;});
+BOX_RANK_CHARS.forEach((ch,i)=>{reqBox[i+1]=parseInt(getV('cond_box_'+ch),10)||0;});
 const conds={};
 for(const[key,id]of Object.entries(COND_FIELDS))conds[key]=getV(id);
 conds.reqBox=reqBox;
@@ -739,6 +746,7 @@ const seedHex=hex4(seed);
 byId('seed').value=seedHex;
 if(rStr)byId('rank').value="0x"+rStr;
 calculate();
+if(mapData&&Number.isInteger(jumpFloor)&&jumpFloor>=0&&jumpFloor<mapData.floorCount)switchFloor(jumpFloor);
 const siSeed=byId('si_seed');
 if(siSeed)siSeed.value=seedHex;
 const mR=byId('mrt_inRank');
@@ -748,12 +756,6 @@ if(mS)mS.value=seedHex;
 const resultEl=byId('result');
 try{resultEl.scrollIntoView({behavior:'smooth'});}
 catch(err){resultEl.scrollIntoView(true);}
-if(jumpFloor!==undefined&&jumpFloor!==null&&jumpFloor!==-1){
-setTimeout(()=>{
-const tab=document.querySelectorAll('.floor-tab')[jumpFloor];
-if(tab)tab.click();
-},50);
-}
 };
 }
 function searchDoneMsg(hitCount){
@@ -991,8 +993,11 @@ bySeed:conds.anomaly==='ghost',
 function MultibugSearch(){
 const conds=getUltimateConds();
 if(!validateElistOnlyMonCombo(conds))return;
-if(USP_FAST_MODES[conds.anomaly]){alert(A15);return;}
-if(conds.anomaly){alert(A12);return;}
+const fm=USP_FAST_MODES[conds.anomaly];
+const fastFloor=!!fm&&fm.mode==='floor';
+if(fm&&!fastFloor){alert(A15);return;}
+if(conds.anomaly&&!fastFloor){alert(A12);return;}
+if(fastFloor&&conds.elist==='MULTI_SPECIAL'){alert(A13);return;}
 const cond_elist=conds.elist;
 const cond_only_mon=conds.onlyMon;
 const isCombinedSearch=isCombinedElistMonsterSearch(conds);
@@ -1002,18 +1007,20 @@ const searchOnlyWithD=searchOnlyWithDNode?searchOnlyWithDNode.checked:false;
 const requireFloorIncrease=byId('requireFloorIncrease').checked;
 const requireBugFloorHitNode=byId('requireBugFloorHit');
 const requireBugFloorHit=requireBugFloorHitNode?requireBugFloorHitNode.checked:false;
-if(!cond_elist&&!cond_only_mon&&!searchOnlyWithD&&!conds.hasBoxCond){effectiveElistCond='ONLY';}
+if(!cond_elist&&!cond_only_mon&&(fastFloor||(!searchOnlyWithD&&!conds.hasBoxCond))){effectiveElistCond='ONLY';}
 executeSharedSearch({
 conds,
 btnId:'searchBtnBug',
 btnText:H07,
 stopText:'STOP',
 emptyRankMsg:B07,
+sortTopN:fastFloor?Infinity:undefined,
+condsTransform:c=>{if(fastFloor)c.anomaly='';},
 filterRanks:(ranksToSearch,conds)=>{
 return sharedRankFilter(ranksToSearch,conds,true);
 },
 processor:'multibug',
-params:{searchOnlyWithD,requireFloorIncrease,requireBugFloorHit,effectiveElistCond,isCombinedSearch},
+params:{searchOnlyWithD,requireFloorIncrease,requireBugFloorHit,effectiveElistCond,isCombinedSearch,fastFloor:fastFloor?{showFloors:!!fm.showFloors}:null},
 });
 }
 function clearUltimateSearch(){
@@ -1046,7 +1053,7 @@ const useDepth2=(mode==='floor'&&!(conds.elist||conds.onlyMon)&&!!conds.depth);
 const allRanksOn=byId('searchAllRanks').checked;
 const isMaxTile=(mode==='maxtile');
 const metricType=fm?fm.metric:null;
-const dedupBySeed=isMaxTile||(useDepth2&&parseInt(conds.depth)>=15&&allRanksOn);
+const dedupBySeed=isMaxTile||(useDepth2&&parseInt(conds.depth,10)>=15&&allRanksOn);
 const searchOnlyWithD=byId('searchOnlyWithD').checked;
 executeSharedSearch({
 conds,
@@ -1070,7 +1077,8 @@ if(useDepth2){c.depth2=c.depth;c.depth='';}
 filterRanks:(ranksToSearch,conds)=>{
 if(isMaxTile)return[0xDD];
 const allRanks=byId('searchAllRanks').checked;
-let ranks=(allRanks&&conds.depth2&&parseInt(conds.depth2)<=14)?[0xDD]:ranksToSearch;
+const rankBound=conds.prefix||conds.suffix||conds.locale||conds.lv||conds.monster||conds.boss||conds.location||hasConditionValue(conds.bq)||conds.bqCount||conds.hasBoxCond;
+let ranks=(allRanks&&!rankBound&&conds.depth2&&parseInt(conds.depth2,10)<=14)?[0xDD]:ranksToSearch;
 return sharedRankFilter(ranks,conds,false);
 },
 processor:'fastest',
@@ -1135,9 +1143,9 @@ function FreeSearch(){
 let groups=[];
 let reqFloorCount=0;
 for(let i=1;i<=3;i++){
-let f=parseInt(byId(`fs_f_${i}`).value);
-let b=parseInt(byId(`fs_b_${i}`).value);
-let r=parseInt(byId(`fs_r_${i}`).value);
+let f=parseInt(byId(`fs_f_${i}`).value,10);
+let b=parseInt(byId(`fs_b_${i}`).value,10);
+let r=parseInt(byId(`fs_r_${i}`).value,10);
 let itm=byId(`fs_i_${i}`).value;
 let t_str=byId(`fs_t_${i}`).value.trim();
 if(b===-1&&r===0&&itm==="ANY")continue;
@@ -1145,7 +1153,7 @@ if(f===0){
 alert(T('Please specify a floor.','請指定目標樓層！','階層を指定してください！'));
 return;
 }
-let t_val=t_str===""?-1:parseInt(t_str);
+let t_val=t_str===""?-1:parseInt(t_str,10);
 if(t_val!==-1&&t_val<CHEST_TIMER_OFFSET)t_val=CHEST_TIMER_OFFSET;
 let targetItems=itm==="ANY"?[]:expandItemGroup(itm);
 let allowedRanks=new Set();
@@ -1350,9 +1358,9 @@ opt.textContent=formatName(md);
 select.appendChild(opt);
 }
 }
-const readAtEnvMR=()=>({envType:parseInt(uiVal('at_env')),
-floorMR:parseInt(uiVal('at_mr'))});
-const readAtMaxSteps=()=>{const el=byId('at_maxSteps'),v=parseInt(el.value);return isNaN(v)||v<1?parseInt(el.defaultValue):v;};
+const readAtEnvMR=()=>({envType:parseInt(uiVal('at_env'),10),
+floorMR:parseInt(uiVal('at_mr'),10)});
+const readAtMaxSteps=()=>{const el=byId('at_maxSteps'),v=parseInt(el.value,10);return isNaN(v)||v<1?parseInt(el.defaultValue,10):v;};
 function atUpd(){
 const{envType,floorMR}=readAtEnvMR();
 const sel=byId('at_mon');
@@ -1384,19 +1392,19 @@ return null;
 function updateATOnlyMonsters(){
 const{envType,floorMR}=readAtEnvMR();
 document.querySelectorAll('.at-dynamic-mon').forEach(el=>{
-const atVal=parseInt(el.getAttribute('data-at'));
+const atVal=parseInt(el.getAttribute('data-at'),10);
 if(!isNaN(atVal))el.textContent=getMonsterNameByAT(atVal,envType,floorMR);
 });
 }
 function updateBattleAT(){
 const deftInput=byId('at_deft');
-const userDeft=(deftInput&&deftInput.value!=='')?parseInt(deftInput.value):DEFAULT_USER_DEFT;
+const userDeft=(deftInput&&deftInput.value!=='')?parseInt(deftInput.value,10):DEFAULT_USER_DEFT;
 const nInput=byId('at_n_input');
-const n=(nInput&&nInput.value!=='')?parseInt(nInput.value):0;
+const n=(nInput&&nInput.value!=='')?parseInt(nInput.value,10):0;
 const cN=atPopIndex(n);
 const{envType,floorMR}=readAtEnvMR();
 document.querySelectorAll('.at-m-card').forEach(card=>{
-const seed=parseInt(card.getAttribute('data-seed'));
+const seed=parseInt(card.getAttribute('data-seed'),10);
 const{atN,atN1}=getATPair(seed,cN);
 const{deft,color:deftColor,label:deftLabel}=formatDeftness(atN1);
 const frame=battleATContext(cN,deft,userDeft);
@@ -1417,7 +1425,7 @@ deftSpan.style.color=deftColor;
 deftSpan.textContent=`${G18} ${deftLabel}`;
 }
 card.querySelectorAll('.at-dynamic-battle').forEach(el=>{
-const target=parseInt(el.getAttribute('data-target'));
+const target=parseInt(el.getAttribute('data-target'),10);
 const{d1,d2,d4}=battleATBudgets(frame,target);
 el.textContent=`${siFormatAT(d1)} / ${siFormatAT(d2)} / ${siFormatAT(d4)}`;
 });
@@ -1426,7 +1434,7 @@ el.textContent=`${siFormatAT(d1)} / ${siFormatAT(d2)} / ${siFormatAT(d4)}`;
 const debouncedUpdateBattleAT=debounce(updateBattleAT,100);
 function readAtPatternUI(){
 const patSel=byId('at_pattern'),probSel=byId('at_threshold');
-return{threshold:parseInt(probSel.value),pType:AT_PAT[patSel.value]||0,
+return{threshold:parseInt(probSel.value,10),pType:AT_PAT[patSel.value]||0,
 patternName:patSel.options[patSel.selectedIndex].text,probText:probSel.options[probSel.selectedIndex].text};
 }
 function atSearch(){
@@ -1435,7 +1443,8 @@ isSearching=true;searchCancel=false;
 const restoreBtn=setStopButton(byId('atSearchBtn'),'STOP');
 const{envType:monEnvType,floorMR:monFloorMR}=readAtEnvMR();
 const monId=uiVal('at_mon');
-const nVal=parseInt(uiVal('at_n_input'));
+const nText=uiVal('at_n_input').trim();
+const nVal=nText===''?0:parseInt(nText,10);
 if(isNaN(nVal)||nVal<0){isSearching=false;restoreBtn();return;}
 const N=atPopIndex(nVal);
 const spawnList=SPAWN_DB[monEnvType]&&SPAWN_DB[monEnvType][monFloorMR];
@@ -1458,7 +1467,7 @@ if(!rangeData){isSearching=false;restoreBtn();return;}
 const{startSeed,endSeed,searchFilterLoc}=rangeData;
 const ranks=hasUltimateConds(conds)?sharedRankFilter(readRanksToSearch(),conds):[parseInt(uiVal('rank'))];
 const deftInput=uiVal('at_deft').trim();
-const deftMax=deftInput!==''?parseInt(deftInput):-1;
+const deftMax=deftInput!==''?parseInt(deftInput,10):-1;
 const{threshold:atThreshold,pType,patternName,probText}=readAtPatternUI();
 let atMaxSteps=readAtMaxSteps();
 if(atMaxSteps<N)atMaxSteps=N;
@@ -1516,10 +1525,10 @@ const restoreBtn=setStopButton(byId('atPtnSchBtn'),'STOP');
 const{threshold,pType,patternName,probText}=readAtPatternUI();
 if(pType===0){alert(A01);isSearching=false;restoreBtn();return;}
 let maxSteps=readAtMaxSteps();
-const nVal=parseInt(uiVal('at_n_input'));
+const nVal=parseInt(uiVal('at_n_input'),10);
 const POPIndex=atPopIndex((isNaN(nVal)||nVal<0)?0:nVal);
 const deftInput=byId('at_deft');
-const userDeft=deftInput&&deftInput.value!==''?parseInt(deftInput.value):DEFAULT_USER_DEFT;
+const userDeft=deftInput&&deftInput.value!==''?parseInt(deftInput.value,10):DEFAULT_USER_DEFT;
 if(maxSteps<POPIndex)maxSteps=POPIndex;
 const{rStr,targetRankKey}=readSearchRank();
 const rangeData=getValidatedSeedRange();
@@ -1885,11 +1894,11 @@ return;
 }
 const seedHex=uiVal('si_seed').trim();
 const seed=parseInt(seedHex,16);
-const envType=parseInt(uiVal('si_env'));
-const floorMR=parseInt(uiVal('si_mr'));
-const userDeft=parseInt(uiVal('si_deft'))||0;
-const n=parseInt(uiVal('si_n'))||0;
-let groupSize=parseInt(uiVal('si_group_size'))||1;
+const envType=parseInt(uiVal('si_env'),10);
+const floorMR=parseInt(uiVal('si_mr'),10);
+const userDeft=parseInt(uiVal('si_deft'),10)||0;
+const n=parseInt(uiVal('si_n'),10)||0;
+let groupSize=parseInt(uiVal('si_group_size'),10)||1;
 const supSel1=byId('si_sup1');
 const supSel2=byId('si_sup2');
 const supPool=[];
@@ -1905,13 +1914,13 @@ sel.dataset.poolKey=supKey;
 }
 });
 const tLvs=[
-parseInt(uiVal('si_t1'))||0,
-parseInt(uiVal('si_t2'))||0,
-parseInt(uiVal('si_t3'))||0,
-parseInt(uiVal('si_t4'))||0
+parseInt(uiVal('si_t1'),10)||0,
+parseInt(uiVal('si_t2'),10)||0,
+parseInt(uiVal('si_t3'),10)||0,
+parseInt(uiVal('si_t4'),10)||0
 ];
-const scanMax=parseInt(uiVal('si_scan_max'))||0;
-const targetTotalStep=parseInt(uiVal('si_target_step'))||35;
+const scanMax=parseInt(uiVal('si_scan_max'),10)||0;
+const targetTotalStep=parseInt(uiVal('si_target_step'),10)||35;
 const pSelect=byId('si_pattern');
 const pTypeStr=pSelect.value;
 const pType=AT_PAT[pTypeStr]||0;
@@ -1976,7 +1985,7 @@ if(pType>0&&foundOffset!==-1){
 const budgets=battleATBudgetsForRun(atContext,abs_1+foundOffset,anchorEnd);
 const{d1,d2,d4}=budgets;
 seqHtml=siBuildSeqHtml(foundSequence);
-const showCombos=d1>=0&&d1<=970;
+const showCombos=d1>=0&&d1<=BAT_AT_MAX;
 const encounters=enumerateEncounterOutcomes(encounterModel);
 if(showCombos){
 const resultsByT=new Map();
@@ -1986,31 +1995,24 @@ const pc=p*100;
 const txt=pc>=10?pc.toFixed(0):pc>=1?pc.toFixed(1):pc>=0.01?pc.toFixed(2):'<0.01';
 return` <span style="color:#6a6;font-size:9px;">p≈${txt}%</span>`;
 };
-function _derivePlan(monGroups){
-const p=deriveSolverBattlePlan(monGroups,monId,_solverMercyLv,false);
-if(p.planType==='kill_mercy_clear')
-return{type:p.planType,effMon:1+p.postAlive,postAlive:p.postAlive};
-if(p.planType==='mercy_first')
-return{type:p.planType,effMon:p.postAlive,postAlive:p.postAlive};
-return{type:'kill_all',effMon:p.T,postAlive:0};
-}
-const _solverMercyLv=(_solverOpt.chars&&_solverOpt.chars.length)
-?Math.max(..._solverOpt.chars.map(c=>c.lv||99)):99;
+const _solverMercyLv=maxCharLv(_solverOpt.chars);
 const _atForT=(t)=>battleATForCount(budgets,t);
 const _fleeTask=(mg,t)=>({bat:_atForT(t),monGroups:mg,monId,mapDeft,userDeft,canRound2});
 const _fleeState=(mg,t)=>{
 if(_atForT(t)<0)return'flee';
+if(solverMetalCompanionGated(mg,monId))return'metal-gate';
 const task=_fleeTask(mg,t);
 const v=peekFleeVerdict(task,_solverOpt);
 if(v===false)return'flee';
 if(v==='fallback')return'fallback';
 if(v==='block-pending')return'block-pending';
+if(v==='limit')return'limit';
 if(v===true)return'ok';
 inspectorProbes.push(task);
 return'pending';
 };
 const _pendTag=(st)=>st==='pending'
-?' <span style="color:#888;font-size:9px;" title="solver judging">…</span>':'';
+?' <span style="color:#888;font-size:9px;" title="solver judging">…</span>':st==='limit'?' <span style="color:#fa0;font-size:9px;">'+SOLVER_LIMIT_LABEL+'</span>':'';
 function _addResult(T,effMon,desc,monGroups,killAllDesc,fleeDesc){
 if(!resultsByT.has(T))resultsByT.set(T,{mixes:[],flee:[],nextOrder:0});
 const bucket=resultsByT.get(T);
@@ -2023,7 +2025,7 @@ const{total:T,monGroups:mg,probability}=encounter;
 const inspectorTask=_fleeTask(mg,T);
 if(inspectorTask.bat>=0)inspectorKeys.push(solverResultCacheKey(inspectorTask,_solverOpt));
 if(T===1)continue;
-const plan=_atForT(T)===0?{type:'kill_all',effMon:T,postAlive:0}:_derivePlan(mg);
+const plan=deriveSolverBattlePlan(mg,monId,_solverMercyLv,_atForT(T)===0);
 const state=_fleeState(mg,T),pTag=_pFmt(probability);
 const mainTag=`<span style="color:#f9c">${mergedSpeciesLabel(mg[0])}</span>`;
 const labels=mg.slice(1).map(s=>mergedSpeciesLabel(s));
@@ -2036,9 +2038,9 @@ const fleeDesc=mainPrefix+supTag+(hp===null?'':` <span style="color:#f44">HP${hp
 const killAllDesc=base+_pendTag(state)+pTag;
 if(state==='flee')_addResult(T,-1,fleeDesc);
 else if(state==='fallback')_addResult(T,T,base+pTag,mg,undefined,fleeDesc);
-else if(plan.type==='kill_all')_addResult(T,T,killAllDesc,mg,undefined,fleeDesc);
+else if(plan.planType==='kill_all')_addResult(T,T,killAllDesc,mg,undefined,fleeDesc);
 else{
-const label=!labels.length?L36:plan.type==='mercy_first'?L39:plan.postAlive>0?L38:L37;
+const label=!labels.length?L36:plan.planType==='mercy_first'?L39:plan.postAlive>0?L38:L37;
 const desc=mainPrefix+supTag+`<span style="color:#0f0"> ${label}→×${plan.effMon}</span>`+_pendTag(state)+pTag;
 _addResult(T,plan.effMon,desc,mg,killAllDesc,fleeDesc);
 }
@@ -2110,10 +2112,6 @@ const SOLVER_RESULT_CACHE_MAX=192;
 const _solverResultCache=new Map();
 const _solverResultPending=new Map();
 window._solverResultCacheStats={hits:0,pendingHits:0,misses:0};
-const solverCharsSig=(chars)=>(chars||[]).map(c=>{
-const s=c.stats||{};
-return[c.slot,c.lv,c.job,c.agi,s.atkOverride,s.might,s.str,s.mending,s.deft].join(',');
-}).join(';');
 const snapshotSolverOptions=()=>({
 chars:readCharStatsFromDom(),
 useStats:solverUseStatsEnabled(),
@@ -2123,7 +2121,6 @@ const _fleeVerdict=new Map();
 const _fleePending=new Map();
 const FLEE_ID_BASE=900000,FLEE_BK_BASE=9000;
 let _fleeProbeSeq=0;
-const fleeVerdictKey=solverResultCacheKey;
 const makeD1SolveTask=(b)=>b.singleEncounter?({
 bat:b.d1,
 monGroups:b.singleEncounter.monGroups,
@@ -2164,7 +2161,7 @@ atk.setAttribute('aria-label','ATK '+i);
 function applyJobStats(charNum){
 const sel=byId('si_job'+charNum);
 if(!sel||sel.value==='')return;
-const job=VOC_STATS[parseInt(sel.value)];
+const job=VOC_STATS[parseInt(sel.value,10)];
 if(!job)return;
 for(const field of SOLVER_STAT_FIELDS.filter(f=>!f.solverOnly)){const el=byId('si_'+field.dom+charNum);if(el)el.value=job.s[field.preset];}
 updateSeedInspector();
@@ -2180,8 +2177,9 @@ st.loading=true;prompt.textContent=L43;
 try{
 const result=await queueSolveTask(request.render,Object.assign({},request.options,{blockFallback:true,blockStages:request.stages}),request.idBase,request.bucketBase);
 if(gen!==_siSolveGen||byId(request.elementId)!==el)return;
-if(!result||typeof result.solvable!=='boolean'){
-prompt.textContent=T('Result unknown — click to retry alternatives','結果未知，點擊重試替代方案','結果は不明です — クリックして代替案を再計算');
+const verdict=solverResultVerdict(result);
+if(verdict!==true&&verdict!==false){
+prompt.textContent=verdict==='limit'?SOLVER_LIMIT_LABEL:T('Result unknown — click to retry alternatives','結果未知，點擊重試替代方案','結果は不明です — クリックして代替案を再計算');
 return;
 }
 Object.assign(window._solverComboMap,result.comboMap||{});
@@ -2221,6 +2219,18 @@ else moreEl.textContent='+'+(st.total-st.shown)+L09;
 }
 }
 function expandCombo(id){
+if(id&&typeof id==='object'){
+const body=id.lastElementChild;
+if(!id.open||!body||body.innerHTML)return;
+const root=id.closest('[id^="combo_detail_"]');
+let data=root&&window._solverComboMap[root.id.replace('combo_detail_','')];
+const parents=[];
+for(let node=id;node&&node!==root;node=node.parentElement)
+if(node.dataset&&node.dataset.solverVariantKind)parents.push(node);
+for(const node of parents.reverse())data=data&&data[node.dataset.solverVariantKind]&&data[node.dataset.solverVariantKind][Number(node.dataset.solverVariantIndex)];
+if(data&&(data.neutralConditions&&data.neutralConditions.proof||data.battleProof))body.innerHTML=renderSolverSimTrace(data);
+return;
+}
 const el=byId('combo_detail_'+id);
 if(!el)return;
 if(el.innerHTML){el.style.display=el.style.display==='none'?'block':'none';return;}
@@ -2229,88 +2239,11 @@ if(!data)return;
 el.innerHTML=renderSolverSimTrace(data);
 el.style.display='block';
 }
-function renderSolverSimTrace(data){
-if(data.neutralConditions)return renderSolverNeutralDetails(data);
-const{combo,killTargets,defend}=data;
-if(!(killTargets==null?void 0:killTargets.length))return'<div style="color:#666;font-size:9px;margin-left:24px;">—</div>';
-if(!data.battleProof)
-return'<div style="color:#888;font-size:9px;margin-left:24px;">'+L19+'</div>';
-const proof={...data.battleProof,useStats:true,usage:solverConditionStatUsage(combo,data.battleProof,killTargets)},chars=proof.party,assign=proof.assign;
-const eggAssign=proof.eggAssign||data.eggAssign;
-const eggTargets=solverConditionEggTargets(combo,eggAssign,proof.assign||assign,chars.length);
-const rows=new Map((proof.actionResults||[]).map(r=>[r.ci,r]));
-const initial=buildSimInstances(killTargets),names=solverTraceInstanceNames(initial,killTargets);
-const sn=v=>DISPLAY_LANG==='EN'?(v.en||v.jp):v.jp;
-const charLabel=c=>{
-if(!c)return'?';
-const role=L20+(c.slot||chars.indexOf(c)+1);
-return role+(c.job!=null&&VOC_STATS[c.job]?' '+(DISPLAY_LANG==='EN'?VOC_STATS[c.job].en:VOC_STATS[c.job].jp):'');
-};
-const hpRange=i=>'HP'+Math.max(0,i.hpLow)+'~'+Math.max(0,i.hp);
-const remainingText=left=>left.length?left.map(i=>'<b>'+names[i.index]+'</b> '+hpRange(i)).join(' / '):L28;
-let html='<div style="font-size:9px;color:#aaa;margin-left:24px;border-left:1px solid #555;padding-left:4px;margin-top:1px;">';
-html+='<div style="color:#888;">'+L21+initial.map((i,index)=>'<b>'+names[index]+'</b> '+hpRange(i)).join(' / ')+'</div>';
-for(let ci=0;ci<combo.length;ci++){
-if(ci%SOLVER_ROUND_SIZE===0){
-const acting=assign.slice(ci,ci+SOLVER_ROUND_SIZE),defenders=[0,1,2,3].filter(index=>!acting.includes(index));
-html+='<div data-stats-round="'+(ci/SOLVER_ROUND_SIZE+1)+'" style="color:#789;">'+(ci?L06:L05)+(defenders.length?' · '+L34+defenders.map(index=>charLabel(chars[index])).join(', '):'')+'</div>';
-}
-const a=combo[ci],char=actorAt(chars,assign,ci),row=rows.get(ci);
-const who='<span style="color:#6cf;font-size:8px;">'+charLabel(char)+'</span> ';
-const lead='<div>'+L22+(ci+1)+L23+who;
-const usage=proof.usage.find(row=>row.index===proof.assign[ci]),actionUsage=usage&&usage.actions.find(row=>row.ci===ci);
-const statText=solverActionStatText(proof,ci);
-const equipment=actionUsage&&WEAPON_META[actionUsage.equip]?' · '+L64+' '+solverConditionText(solverWeaponName(actionUsage.equip)):'';
-const atStr=' · AT '+(a.at||0)+equipment+(statText?' · '+solverConditionText(statText):'');
-if(a.jp==='おうえん'){
-const target=eggTargets[ci],beneficiary=target===undefined?'?':
-L20+((assign?assign[target]:target%4)+1)+' '+sn(combo[target]);
-html+=lead+'<span style="color:#ff0;">'+sn(a)+'</span> → '+beneficiary+atStr+'</div>';
-continue;
-}
-if(a.at===0&&getFourceEls(a.jp)){
-html+=lead+'<span style="color:#f80;">'+sn(a)+'</span> → '+T('All allies','全員','味方全員')+' '+L30+atStr+'</div>';
-continue;
-}
-if(!row){html+=lead+sn(a)+atStr+'</div>';continue;}
-if(a.jp==='みのがす'){
-const removed=row.targets.map(t=>names[t.index]);
-html+=lead+'<span style="color:#0ff;">'+sn(a)+'</span>'+atStr+' → '+
-(removed.length?removed.join(',')+L24:L25)+L27+remainingText(row.remaining)+'</div>';
-continue;
-}
-const kind=SolverActionGate.targetKind(lookupSkill(a.jp)),hits=SolverActionGate.hits(a);
-const mul=(eggAssign==null?void 0:eggAssign[ci])||1,metalOnly=row.targets.every(t=>isMetalHex(t.hex));
-const mulStr=mul>1?'<span style="color:#ff0;">×'+mul+
-(metalOnly?'':'＋'+tensionFlat(mul,(char==null?void 0:char.lv)||99))+'</span>':'';
-let count=' · '+L65+' '+hits;
-if(kind==='A'||kind==='G'){
-count=' · '+T('Hits per enemy','每隻擊數','1体あたりの攻撃回数')+' '+hits;
-if(Number.isInteger(row.hitCount)){
-count+=' · '+SOLVER_HIT_LABEL.hit+row.hitCount+SOLVER_HIT_LABEL.unit;
-if(row.hitCount!==row.targets.length)count+=' / '+SOLVER_HIT_LABEL.target+row.targets.length+SOLVER_HIT_LABEL.unit;
-}else count+=' · '+SOLVER_HIT_LABEL.target+row.targets.length+SOLVER_HIT_LABEL.unit;
-}
-const detail=row.targets.map(t=>{
-const ko=t.outcome==='ko',possible=t.outcome==='possible';
-const before={hp:t.hpBefore,hpLow:t.hpLowBefore};
-return names[t.index]+(t.miss?' '+SOLVER_MISS_LABEL.all:'')+': '+hpRange(before)+'→<span style="color:'+
-(ko?'#f44':possible?'#f80':'#8f8')+';">'+Math.max(0,t.hpLow)+'~'+Math.max(0,t.hp)+
-'</span>'+(ko?L32:possible?L33:'');
-}).join(' / ');
-const miss=row.miss?SOLVER_MISS_LABEL.all:row.partialMiss?SOLVER_MISS_LABEL.partial:'';
-html+=lead+'<span style="color:#ccc;">'+sn(a)+(miss?' '+miss:'')+'</span>'+mulStr+' ['+kind+']'+atStr+count+' → '+
-detail+L27+remainingText(row.remaining)+'</div>';
-}
-if((defend==null?void 0:defend.length))html+='<div style="color:#789;margin-top:1px;">'+L34+
-defend.map(i=>charLabel(chars[i])).join(', ')+'</div>';
-return html+renderSolverPlanVariantRows(data)+'</div>';
-}
 function solverResultCacheKey(render,options){
 const canRound2=solverAllowsRound2(render.mapDeft,render.canRound2);
-const charSig=options.useStats?solverCharsSig(options.chars):'neutral';
+const charSig=options.useStats?JSON.stringify(options.chars):'neutral';
 return[DISPLAY_LANG,render.monId,render.bat,canRound2?1:0,render.userDeft,render.mapDeft,
-options.useStats?1:0,options.multiPlayer?1:0,options.blockFallback?1:0,charSig,
+options.useStats?1:0,options.multiPlayer?1:0,options.blockFallback?1:0,options.metalGate?1:0,charSig,
 (render.monGroups||[]).map(g=>[g.hex,g.count||1,g.death||0,g.isMain?1:0].join(':')).join(',')
 ].join('|');
 }
@@ -2334,14 +2267,13 @@ return Object.assign({},src,{html,comboMap,buckets});
 function getCachedSolverResult(key,idBase,bucketBase){
 const entry=_solverResultCache.get(key);
 if(!entry)return null;
-if(!entry.result.needsBlockFallback&&solverResultVerdict(entry.result)===null){_solverResultCache.delete(key);return null;}
 _solverResultCache.delete(key);_solverResultCache.set(key,entry);
 window._solverResultCacheStats.hits++;
 return rebaseSolverCachedResult(entry,idBase,bucketBase);
 }
 function setCachedSolverResult(key,result,idBase,bucketBase){
 const entry={result,idBase:idBase||0,bucketBase:bucketBase||0};
-if(!result.needsBlockFallback&&solverResultVerdict(result)===null)return entry;
+if(result.renderError||!result.needsBlockFallback&&solverResultVerdict(result)===null)return entry;
 if(_solverResultCache.has(key))_solverResultCache.delete(key);
 _solverResultCache.set(key,entry);
 while(_solverResultCache.size>SOLVER_RESULT_CACHE_MAX)
@@ -2349,23 +2281,28 @@ _solverResultCache.delete(_solverResultCache.keys().next().value);
 return _solverResultCache.get(key);
 }
 function solverResultVerdict(result){
-if(!result||result.needsKillAll||result.needsBlockFallback||typeof result.solvable!=='boolean')return null;
-return result.solvable;
+if(!result||result.renderError||result.needsKillAll||result.needsBlockFallback)return null;
+if(result.solvable===true)return true;
+if(result.solvable===null&&result.limited)return'limit';
+if(result.solvable===false&&!result.incomplete)return false;
+return null;
 }
 function peekFleeVerdict(task,opt){
-const k=fleeVerdictKey(task,opt);
-return _fleeVerdict.has(k)?_fleeVerdict.get(k):null;
+const k=solverResultCacheKey(task,opt);
+if(_fleeVerdict.has(k))return _fleeVerdict.get(k);
+const cached=_solverResultCache.get(k);
+return cached&&solverResultVerdict(cached.result)==='limit'?'limit':null;
 }
-function cacheFleeVerdictResult(task,opt,result,key=fleeVerdictKey(task,opt)){
-if(result&&result.needsBlockFallback){_fleeVerdict.set(key,'block-pending');return'block-pending';}
+function cacheFleeVerdictResult(task,opt,result,key=solverResultCacheKey(task,opt)){
+if(result&&!result.renderError&&result.needsBlockFallback){_fleeVerdict.set(key,'block-pending');return'block-pending';}
 const verdict=solverResultVerdict(result);
-if(verdict===null)return null;
+if(verdict===null||verdict==='limit')return verdict;
 const solvable=verdict&&result.fallback?'fallback':verdict;
 _fleeVerdict.set(key,solvable);
 return solvable;
 }
 function requestFleeVerdict(task,opt){
-const k=fleeVerdictKey(task,opt);
+const k=solverResultCacheKey(task,opt);
 if(_fleeVerdict.has(k))return Promise.resolve(_fleeVerdict.get(k));
 if(_fleePending.has(k))return _fleePending.get(k);
 const solveGen=_siSolveGen;
@@ -2506,35 +2443,44 @@ const _mergeEquivalentPatterns=()=>{
 const seen=new Map();
 for(let i=0;i<tasks.length;i++){
 const meta=taskMeta[i],result=taskResults[i];
-if(!meta||!meta.pattern||!result||result.flee||result.needsBlockFallback)continue;
+if(!meta||!meta.pattern||meta.merged||!result||result.flee||result.needsBlockFallback||result.needsMetalGate)continue;
 const sig=meta.section+'\x1a'+solverTaskOutputSignature(result.html,options.useStats);
 if(!seen.has(sig)){seen.set(sig,i);continue;}
 const keepMeta=taskMeta[seen.get(sig)];
 if(!keepMeta.mergedDescs)keepMeta.mergedDescs=[keepMeta.desc];
-keepMeta.mergedDescs.push(meta.desc);
+keepMeta.mergedDescs.push(...(meta.mergedDescs||[meta.desc]));
+meta.merged=true;
 const descEl=byId(keepMeta.descId);
 if(descEl)descEl.innerHTML=keepMeta.mergedDescs.join('<br>');
 const duplicateRow=byId(meta.rowId);
 if(duplicateRow)duplicateRow.remove();
 }
 };
-const _completeTask=(i,result)=>{
+const _completeTask=(i,result,opt=options)=>{
 if(viewGen!==_siSolveGen)return;
 if(result.comboMap)Object.assign(window._solverComboMap,result.comboMap);
 if(result.buckets)Object.assign(window._solverBuckets,result.buckets);
-const verdict=cacheFleeVerdictResult(tasks[i],options,result);
+const verdict=cacheFleeVerdictResult(tasks[i],opt,result);
 const meta=taskMeta[i];
+if(result.needsMetalGate){
+const prompt=solverMetalGatePromptHTML(taskElementIds[i],i);
+taskResults[i]={html:prompt,flee:false,needsMetalGate:true};
+_fill(i,prompt);
+completedTasks++;
+if(completedTasks===tasks.length)_mergeEquivalentPatterns();
+return;
+}
 if(result.needsBlockFallback){
 const bucketId='sb'+i*BK_SPAN;
-window._solverBuckets[bucketId]={blocked:true,request:{render:tasks[i],options,stages:result.blockStages,idBase:i*ID_SPAN,bucketBase:i*BK_SPAN,elementId:taskElementIds[i],descId:meta&&meta.descId,killAllDesc:meta&&meta.killAllDesc}};
-const prompt='<div id="'+bucketId+'_blk" style="font-size:10px;margin-left:16px;color:#08c;cursor:pointer;" onclick="showBlockFallback(\''+bucketId+'\')">'+L17+'</div>';
+window._solverBuckets[bucketId]={blocked:true,request:{render:tasks[i],options:opt,stages:result.blockStages,idBase:i*ID_SPAN,bucketBase:i*BK_SPAN,elementId:taskElementIds[i],descId:meta&&meta.descId,killAllDesc:meta&&meta.killAllDesc}};
+const prompt=SOLVER_BLOCK_PROMPT_HTML.replace(/\$bucket/g,bucketId).replace('$label',L17);
 taskResults[i]={html:prompt,flee:false,needsBlockFallback:true};
 _fill(i,prompt);
 completedTasks++;
 if(completedTasks===tasks.length)_mergeEquivalentPatterns();
 return;
 }
-if((verdict===false||verdict===null)&&(meta==null?void 0:meta.pattern)){
+if(verdict===false&&(meta==null?void 0:meta.pattern)){
 taskResults[i]={html:'',flee:true};
 const section=fleeSections.get(meta.section);
 if(section){
@@ -2551,8 +2497,10 @@ completedTasks++;
 if(completedTasks===tasks.length)_mergeEquivalentPatterns();
 return;
 }
-const resultHtml=(verdict===false||verdict===null)
+const resultHtml=verdict===false
 ?`<div style="font-size:9px;margin-left:16px;"><span style="color:#f44;">${L44}</span></div>`
+:verdict==='limit'?'<div style="font-size:9px;margin-left:16px;color:#fa0;">'+SOLVER_LIMIT_LABEL+'</div>'
+:verdict===null?'<div style="font-size:9px;margin-left:16px;color:#fa0;">'+T('Result unknown.','結果未知。','結果は未確定です。')+'</div>'
 :(result&&result.html!==undefined?result.html:'');
 taskResults[i]={html:resultHtml,flee:false};
 if(verdict==='fallback'&&(taskMeta[i]==null?void 0:taskMeta[i].killAllDesc)){
@@ -2564,6 +2512,22 @@ taskMeta[i].desc=fbDesc;
 _fill(i,taskResults[i].html);
 completedTasks++;
 if(completedTasks===tasks.length)_mergeEquivalentPatterns();
+};
+window._solverRunMetalGate=(i)=>{
+const prompt=byId(taskElementIds[i]+'_mg');
+if(viewGen!==_siSolveGen||!taskResults[i]||!taskResults[i].needsMetalGate||!prompt||prompt.dataset.running)return;
+prompt.dataset.running='1';prompt.textContent=L43;
+const runOptions=Object.assign({},options,{metalGate:true});
+queueSolveTask(tasks[i],runOptions,i*ID_SPAN,i*BK_SPAN).then((m)=>{
+if(viewGen!==_siSolveGen)return;
+completedTasks--;
+_completeTask(i,m,runOptions);
+}).catch((e)=>{
+if(viewGen!==_siSolveGen)return;
+console.warn('[Solver] 金屬跟班點擊計算失敗:',e&&e.message);
+const again=byId(taskElementIds[i]+'_mg');
+if(again){again.textContent=SOLVER_METAL_GATE_LABEL;delete again.dataset.running;}
+});
 };
 tasks.forEach((task,i)=>{
 queueSolveTask(task,options,i*ID_SPAN,i*BK_SPAN).then((m)=>{

@@ -9,7 +9,7 @@ const A02=T('Unexpected error during search. See Console (Google Chrome F12) for
 const A03=T('Sorry! Quickload search is not available for chest monsters.','非常抱歉！寶箱怪只能搜體感。','宝箱モンスターは体感検索のみ対応しています。');
 const A05=T('Sorry! Searching for this item is currently unavailable.','非常抱歉！這個物品的搜尋功能暫未開通。','このアイテムの検索機能は現在未実装です。');
 const A06=T('No output! Please perform a search first.','目前沒有搜尋結果可以匯出！請先執行一次搜索。','出力する結果がありません！先に検索を実行してください。');
-const A07=T('❌ Output error!\\n\\nReason:','❌ 匯出失敗！\\n\\n錯誤原因：','❌ 出力に失敗しました！\\n\\n原因：');
+const A07=T('❌ Output error!\n\nReason:','❌ 匯出失敗！\n\n錯誤原因：','❌ 出力に失敗しました！\n\n原因：');
 const A08=T('No valid maps in this Seed range when filtering by location.','在勾選「排除無位置地圖」的情況下，您輸入的 Seed 範圍內沒有合法地圖！','場所候補フィルター有効時、この Seed 範囲に該当する地図はありません！');
 const A09=T('Invalid Location. Valid range: 01–96 (hex), digits 0–9 and A–F only.','無效的位置値。有效範圍：01–96（十六進制），僅限 0–9 及 A–F。','無効な場所コードです。有効な入力範囲：01–96（16進数）、0–9 および A–F のみ。');
 const A10=T('Invalid Seed. Valid range: 0000–7FFF (hex), digits 0–9 and A–F only.','無效的 Seed 値。有效範圍：0000–7FFF（十六進制），僅限 0–9 及 A–F。','無効な Seed です。有効な入力範囲：0000–7FFF（16進数）、0–9 および A–F のみ。');
@@ -75,7 +75,6 @@ const G13=T('ONLY Monster','指定 ONLY 怪物','オンリーモンスター');
 const G14=T('Seed Range (Hex)','Seed 範圍 (Hex)','Seed 範囲 (Hex)');
 const G15=T('4-player multiplay bug','4人連線異變','4人マルチによるバグ');
 const G16=T('B3/B4/B9 Solo･Party / Combo / 3rd Chest (B13:S3)','B3/B4/B9 即開･一人旅 / 體感 / 整列箱 (B13:S整列)','B3/B4/B9 即開･一人旅 / 体感 / 整列箱 (B13:S整列)');
-const G17=T('Free Search','自由搜尋','フリー検索');
 const G18=T('Deftness','靈巧','きようさ');
 const G19=T('Zoom','魯拉','ﾙｰﾗ');
 const G20=T('Pattern','掉寶Pattern','ﾄﾞﾛｯﾌﾟﾊﾟﾀｰﾝ');
@@ -136,6 +135,7 @@ const L41=T(' recommended combos',' 推薦組合',' おすすめの組み合わ�
 const L42=T('▸ Click an AT value to view recommended combos for that enemy pattern','▸ 點 AT 値査看該 pattern 的推薦組合','▸ AT値をクリックすると、その敵パターンのおすすめ組み合わせを表示');
 const L43=T('Solver calculating…','Solver 計算中…');
 const L44=T('Flee','逃跑','にげる');
+const SOLVER_LIMIT_LABEL=T('No solution within search limit','上限內無解','探索上限に達しました（解は見つかりませんでした）');
 const L45=T('(No corresponding formation for this case)','（此情形無對應形態）','（この条件に対応する編成なし）');
 const L46=T('YES','是','はい');
 const L47=T('NO','否','いいえ');
@@ -207,7 +207,7 @@ const AT_PAT=Object.fromEntries(AT_O.map(([k],i)=>[k,i+1]));
 const i18nDict={
 'F01':F01,'F03':F03,'F04':F04,
 'G01':G01,'G03':G03,'G04':G04,'G05':G05,'G06':G06,'C02':C02,'C03':C03,'G09':G09,'G10':G10,'G11':G11,'G12':G12,'G13':G13,'G14':G14,'G15':G15,
-'G16':G16,'G17':G17,'G18':G18,'G19':G19,'G20':G20,'G21':G21,'G22':G22,'G23':G23,'G24':G24,'G25':G25,'GBQ':GBQ,
+'G16':G16,'G18':G18,'G19':G19,'G20':G20,'G21':G21,'G22':G22,'G23':G23,'G24':G24,'G25':G25,'GBQ':GBQ,
 'H00':H00,'H01':H01,'H02':H02,'H03':H03,'H04':H04,'H07':H07,'H08':H08,'H09':H09,
 'K01':K01,'K02':K02,'K03':K03,
 'TKB1_1':TKB1_1,'TKB1_2':TKB1_2,'TKB1_3':TKB1_3,'TKB2_1':TKB2_1,'TKB2_2':TKB2_2,'TKB2_3':TKB2_3,'TKB3_0':TKB3_0,'TKB3_1':TKB3_1,'TKB3_2':TKB3_2,'TKB4_1':TKB4_1,'TKB4_2':TKB4_2,'TKB4_3':TKB4_3,'TKB4_4':TKB4_4,'TKB4_5':TKB4_5,'TKB4_6':TKB4_6,'TKB4_7':TKB4_7,'TKB4_8':TKB4_8,'TKB4_9':TKB4_9,'TKB4_10':TKB4_10,'TKB4_11':TKB4_11,
@@ -268,7 +268,7 @@ const TableR=[
 ["Chimaera wing","キメラのつばさ"],["Oaken club","こんぼう"],["Pop socks","ニーソックス"],["Silver bracelets","ぎんのリスト"],
 ["Bunny tail","うさぎのおまもり"],["Royal soil","まりょくの土"],["Lava lump","ようがんのカケラ"],["Angel bell","天使のすず"],
 ["Silver platter","シルバートレイ"],["Fisticup","げんこつダケ"],["Iron nails","てつのクギ"],["Gold ring","きんのゆびわ"],
-["Gold bracer","きんのプレスレット"],["Iron mask","てっかめん"],["Toad oil","ガマのあぶら"],["Fisticup","げんこつダケ"],
+["Gold bracer","きんのブレスレット"],["Iron mask","てっかめん"],["Toad oil","ガマのあぶら"],["Fisticup","げんこつダケ"],
 ["Iron ore","てっこうせき"],["Slime shield","スライムトレイ"],["Corundum","ルビーのげんせき"],["Rockbomb shard","ばくだん石"],
 ["Flintstone","つけもの石"],["Mirrorstone","かがみ石"],["Resurrock","命の石"],["Strength ring","ちからのゆびわ"],
 ["Agility ring","はやてのリング"],["Manky mud","どくどくヘドロ"],["Nectar","花のみつ"],["Sorcerer's stone","ひらめきのジュエル"],

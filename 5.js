@@ -53,13 +53,14 @@ items:aborted?[]:items,hits:aborted?0:hits,aborted});
 function setupSolverWorker(m){
 setDisplayLang(m.lang||'EN');
 self.window=self;
-self.document={getElementById:(id)=>(m.dom&&(id in m.dom))?{checked:!!m.dom[id]}:null};
+const els=new Map(Object.entries(m.dom||{}).map(([id,on])=>[id,{checked:!!on}]));
+self.document={getElementById:id=>els.get(id)||null};
 readCharStatsFromDom=()=>m.chars||[];
 window._solverComboMap={};window._solverComboId=m.idBase||0;
 window._solverBucketId=m.bucketBase||0;window._solverBuckets={};
 window._solverFallback=!!m.initialFallback;window._solverSolvable=null;
 window._solverNeedsKillAll=null;
-_solverSearchIncomplete=false;_solverRenderDepth=0;_solverGoldState=null;
+_solverSearchIncomplete=false;_solverSearchLimited=false;_solverRenderDepth=0;_solverGoldState=null;
 }
 self.addEventListener('message',(e)=>{
 const m=e.data;
@@ -69,11 +70,11 @@ try{
 setupSolverWorker(m);
 const html=renderSolverResult(m.render.bat,m.render.monGroups,m.render.monId,
 m.render.mapDeft,m.render.canRound2,!!m.forceKillAll,
-m.prebuiltKmc||null,m.prebuiltKillAll||null,!!m.deferKillAll,false,!!m.incomplete,m.render.userDeft);
+m.prebuiltKmc||null,m.prebuiltKillAll||null,!!m.deferKillAll,false,!!m.incomplete,!!m.limited);
 self.postMessage({type:'solveDone',solveId:m.solveId,html,
 comboMap:window._solverComboMap,buckets:window._solverBuckets,
 fallback:window._solverFallback||false,solvable:window._solverSolvable,
-incomplete:_solverSearchIncomplete,
+incomplete:_solverSearchIncomplete,limited:_solverSearchLimited,renderError:!!window._solverRenderError,
 needsKillAll:window._solverNeedsKillAll||null});
 }catch(err){
 self.postMessage({type:'solveError',solveId:m.solveId,message:''+(err&&err.stack||err)});

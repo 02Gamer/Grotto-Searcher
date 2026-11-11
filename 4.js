@@ -19,17 +19,31 @@ mapData=null;
 renderResult(C17);
 return;
 }
-mapData=new GrottoDetail();
-mapData.MapSeed=seed;
-mapData.MapRank=rank;
-mapData.calculateDetail();
+if(mapData&&mapData.floorCount>0&&mapData.MapSeed===seed&&mapData.MapRank===rank){
+switchFloor(0);
+return;
+}
+const nextMap=new GrottoDetail();
+nextMap.MapSeed=seed;
+nextMap.MapRank=rank;
+nextMap.calculateDetail();
+mapData=nextMap;
 activeFloor=0;
 renderResult();
 }
+const MAP_DROP_SLOTS=Array.from({length:5},(_,bk)=>({gIdx:0,bk,rareThreshold:dropATThreshold(DEFAULT_RARE_RATE),normalThreshold:dropATThreshold(DEFAULT_NORMAL_RATE)}));
 function calcR2N2(seed){
-const slots=Array.from({length:5},(_,bk)=>({gIdx:0,bk,rareThreshold:dropATThreshold(DEFAULT_RARE_RATE),normalThreshold:dropATThreshold(DEFAULT_NORMAL_RATE)}));
-const first=key=>{const r=scanDropPatternStarts(seed,key,slots,1,400,1)[0];return r?r.start:-1;};
-return{r2:first('R2'),r2_3:first('R2_3'),n2:first('N2')};
+const result={r2:-1,r2_3:-1,n2:-1};
+let rng=seed>>>0;
+for(let start=1;start<=400;start++){
+const{rareHits,normHits}=simulateDropSlots(rng,MAP_DROP_SLOTS,false);
+if(result.r2===-1&&siMatchesPattern(rareHits,SI_PATTERN_INDICES.R2))result.r2=start;
+if(result.r2_3===-1&&siMatchesPattern(rareHits,SI_PATTERN_INDICES.R2_3))result.r2_3=start;
+if(result.n2===-1&&siMatchesPattern(normHits,SI_PATTERN_INDICES.N2))result.n2=start;
+if(result.r2!==-1&&result.r2_3!==-1&&result.n2!==-1)break;
+rng=lcg(rng);
+}
+return result;
 }
 function renderResult(errorMessage=C18){
 const el=byId('map_summary');
@@ -37,7 +51,7 @@ const hasMap=!!(mapData&&mapData.floorCount>0);
 byId('map_box_label').textContent=hasMap?C08:'';
 for(const id of['map_box_label','map_box_total'])byId(id).style.display=hasMap?'':'none';
 if(!hasMap){
-el.innerHTML='<div class="error">'+errorMessage+'</div>';
+el.innerHTML='<div class="error" data-i18n="'+(errorMessage===C17?'C17':'C18')+'">'+errorMessage+'</div>';
 byId('map_box_counts').innerHTML='';
 byId('map_box_total').textContent='';
 byId('map_floors').innerHTML='';
@@ -309,17 +323,14 @@ body.style.padding='0';
 body.style.overflowY='hidden';
 body.style.display='flex';
 body.style.flexDirection='column';
-body.innerHTML=`<div class="modal-tabs">
-<div id="ctTabEN" class="modal-lang-tab modal-lang-tab-bordered modal-lang-tab-animated" style="background:#1a1a3a;color:#ffd700;border-color:#4a4a8a" onclick="switchCtTab('EN')">English</div>
-<div id="ctTabJP" class="modal-lang-tab modal-lang-tab-bordered modal-lang-tab-animated" style="background:#224;color:#888;border-color:#333" onclick="switchCtTab('JP')">日本語</div>
-</div>
+body.innerHTML=`<div class="modal-tabs"></div>
 <div style="padding: 12px 16px;overflow-y: auto;flex: 1;">
-<div id="ctListEN" style="display: block;">${htmlEN}</div>
-<div id="ctListJP" style="display: none;">${htmlJP}</div>
+<div id="ctListEN">${htmlEN}</div>
+<div id="ctListJP">${htmlJP}</div>
 </div>
 `;
 modal.style.display='flex';
-switchCtTab(DISPLAY_LANG!=='EN'?'JP':'EN');
+switchTab('chest',DISPLAY_LANG!=='EN'?'JP':'EN');
 }
 const DW_L={
 TW:{
@@ -384,8 +395,8 @@ const $=id=>byId(id+'_'+L);
 const envEl=$('dw_env');
 if(!envEl)return;
 _dwSel[L]=0;
-const envType=parseInt(envEl.value);
-const floorMR=parseInt($('dw_mr').value);
+const envType=parseInt(envEl.value,10);
+const floorMR=parseInt($('dw_mr').value,10);
 const X=DW_L[L];
 const monSel=$('dw_mon');
 monSel.innerHTML='';
@@ -435,9 +446,9 @@ if(!/^[0-9A-Fa-f]{1,4}$/.test(seedStr)){
 scanHtml=`<div style="color:#f66;font-size:11px;margin-bottom:4px">${X.bad}</div>`;
 }else{
 const seed=parseInt(seedStr,16)>>>0;
-const rr=parseInt($('dw_rr').value);
-const nr=parseInt($('dw_nr').value);
-const lv=Math.min(99,Math.max(1,parseInt($('dw_lv').value)||99));
+const rr=parseInt($('dw_rr').value,10);
+const nr=parseInt($('dw_nr').value,10);
+const lv=Math.min(99,Math.max(1,parseInt($('dw_lv').value,10)||99));
 const tLvs=[lv,lv,lv,lv];
 const evidence=scanDropPatternStarts(seed,patKey,buildDropSlots(n,rr,nr,tLvs),38,2037,60);
 const matches=evidence.map(item=>item.start);
@@ -491,66 +502,41 @@ out.innerHTML=html;
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',dwInit);
 else setTimeout(dwInit,0);
-const MODAL_TAB_KEYS=['TW','EN','JP','SP'];
-const MODAL_THEMES={
-gold:['#ffd700','#4a4a8a','#224','#888','#333'],
-cyan:['#0ff','#4a4a8a','#224','#888','#333'],
-teal:['#0ca','#055','#001a1a','#598','#033'],
-};
+const MODAL_TAB_LABELS={TW:'繁體中文',EN:'English',JP:'日本語',SP:'SP'};
 const MODAL_CONFIGS={
-chest:{id:'chestModal',prefix:'ct',theme:MODAL_THEMES.gold},
-disclaimer:{id:'disclaimerModal',prefix:'disc',theme:MODAL_THEMES.gold},
-h1:{id:'h1Modal',prefix:'h1',theme:MODAL_THEMES.cyan},
-h2:{id:'h2Modal',prefix:'h2',theme:MODAL_THEMES.cyan},
-h3:{id:'h3Modal',prefix:'h3',theme:MODAL_THEMES.teal},
+chest:{id:'chestModal',prefix:'ct',langs:['EN','JP']},
+disclaimer:{id:'disclaimerModal',prefix:'disc',langs:['TW','EN','JP']},
+h1:{id:'h1Modal',prefix:'h1',langs:['TW','EN','JP']},
+h2:{id:'h2Modal',prefix:'h2',langs:['TW','EN','JP','SP']},
+h3:{id:'h3Modal',prefix:'h3',langs:['TW','EN','JP']},
 };
-function switchTab(prefix,lang,activeColor,activeBorder,inactiveBg,inactiveColor,inactiveBorder){
-MODAL_TAB_KEYS.forEach(key=>{
-let tab=byId(prefix+'Tab'+key);
-let list=byId(prefix+'List'+key);
-if(!tab||!list)return;
-const active=key===lang;
-tab.style.background=active?'#1a1a3a':inactiveBg;
-tab.style.color=active?activeColor:inactiveColor;
-tab.style.borderColor=active?activeBorder:inactiveBorder;
-list.style.display=active?'block':'none';
+function switchTab(configKey,lang){
+const config=MODAL_CONFIGS[configKey];
+const bar=byId(config.id).querySelector('.modal-tabs');
+if(!bar.firstChild)bar.innerHTML=config.langs.map(key=>`<div id="${config.prefix}Tab${key}" class="modal-lang-tab${key==='SP'?' modal-lang-tab-compact':''}" onclick="switchTab('${configKey}', '${key}')">${MODAL_TAB_LABELS[key]}</div>`).join('');
+config.langs.forEach(key=>{
+byId(config.prefix+'Tab'+key).classList.toggle('active',key===lang);
+byId(config.prefix+'List'+key).hidden=key!==lang;
 });
 }
-function openModal(modalId,tabPrefix,activeColor,activeBorder,inactiveBg,inactiveColor,inactiveBorder){
-const modal=byId(modalId);
-if(!modal)return;
-modal.style.display='flex';
-switchTab(tabPrefix,['TW','EN','JP'].includes(DISPLAY_LANG)?DISPLAY_LANG:'TW',activeColor,activeBorder,inactiveBg,inactiveColor,inactiveBorder);
-}
-function switchConfiguredModalTab(configKey,lang){
-const config=MODAL_CONFIGS[configKey];
-switchTab(config.prefix,lang,...config.theme);
-}
-function openConfiguredModal(configKey){
-const config=MODAL_CONFIGS[configKey];
-openModal(config.id,config.prefix,...config.theme);
+function openModal(configKey){
+byId(MODAL_CONFIGS[configKey].id).style.display='flex';
+switchTab(configKey,['TW','EN','JP'].includes(DISPLAY_LANG)?DISPLAY_LANG:'TW');
 }
 function closeConfiguredModal(configKey){
 byId(MODAL_CONFIGS[configKey].id).style.display='none';
 }
-function closeChestModal(){closeConfiguredModal('chest');}
-function switchCtTab(lang){switchConfiguredModalTab('chest',lang);}
-function openDisclaimerModal(){openConfiguredModal('disclaimer');}
-function closeDisclaimerModal(){closeConfiguredModal('disclaimer');}
-function switchDisclaimerTab(lang){switchConfiguredModalTab('disclaimer',lang);}
-function openh1Modal(){openConfiguredModal('h1');}
-function closeh1Modal(){closeConfiguredModal('h1');}
-function switchH1Tab(lang){switchConfiguredModalTab('h1',lang);}
-function openh2Modal(){openConfiguredModal('h2');}
-function closeh2Modal(){closeConfiguredModal('h2');}
-function switchH2Tab(lang){switchConfiguredModalTab('h2',lang);}
-function openh3Modal(){openConfiguredModal('h3');}
-function closeh3Modal(){closeConfiguredModal('h3');}
-function switchH3Tab(lang){switchConfiguredModalTab('h3',lang);}
 window.addEventListener('DOMContentLoaded',()=>{
-const schedule=window.requestIdleCallback?(fn)=>window.requestIdleCallback(fn,{timeout:200}):(fn)=>setTimeout(fn,1);
-let next=2048;
-const step=()=>{if(advanceBqCountFeasibility(next))return;next+=2048;schedule(step);};
+const schedule=window.requestIdleCallback?(fn)=>window.requestIdleCallback(fn,{timeout:200}):(fn)=>setTimeout(fn,16);
+let next=0;
+const step=deadline=>{
+const started=performance.now();
+do{
+next+=16;
+if(advanceBqCountFeasibility(next))return;
+}while(performance.now()-started<4&&(!deadline||deadline.timeRemaining()>1));
+schedule(step);
+};
 schedule(step);
 });
 window.addEventListener('DOMContentLoaded',()=>{
@@ -642,7 +628,7 @@ let rankSelect=byId(`fs_r_${groupId}`);
 let itemSelect=byId(`fs_i_${groupId}`);
 if(!rankSelect||!itemSelect)return;
 let currentVal=preserveSelection?itemSelect.value:"ANY";
-let r=parseInt(rankSelect.value);
+let r=parseInt(rankSelect.value,10);
 let itemOpts=`<option value="ANY">---</option>`;
 let seen=new Set();
 let hasSpecial=false;
