@@ -3846,7 +3846,7 @@ _x12Kills={c:combo,k:kills};
 try{
 forEachSolverAssignment(combo,chars,assign=>{
 const out={};
-const rating=checkSolverDamage(combo,hexId,mon,killTargets,tensionMul,fourceEls,out,assign,undefined,chars);
+const rating=checkSolverDamage(combo,hexId,mon,killTargets,tensionMul,fourceEls,out,assign,undefined,chars,{bat});
 last=Math.max(last,out.rejectLast===undefined?Infinity:out.rejectLast);
 const rank=getRankOrderValue(rating);
 if(rank===2&&bat!==undefined&&_solverGoldState&&!_solverGoldState.gold)
@@ -4214,7 +4214,7 @@ const _lastCI=skillDmg.length-1;
 const _mercyFinal=_lastCI>=0&&combo[_lastCI].jp==='みのがす';
 const orangeStart=run=>run.reason==='uncertain'&&run.rejectAt===_lastCI&&!_mercyFinal&&!(_solverGoldState&&_solverGoldState.gold)&&!run.multi;
 let bestRating=null,bestAssign=null,bestEggTargets=null,bestActionResults=null,bestR1Removal=false,bestFallbackKind,bestMinRun=null,bestMaxRun=null,cleanRun=null,fallbackRun=null;
-const fits=run=>!(evaluation&&evaluation.accept)||evaluation.accept(run),sigOf=run=>run.path.join(';'),sameAim=(x,y)=>x.length===y.length&&x.every((v,k)=>v===y[k]);
+const fits=run=>!evaluation||(evaluation.bat===undefined||run.actualAT+solverRoundCost(combo,instances.length,run.r1Removal)===evaluation.bat)&&(!evaluation.accept||evaluation.accept(run)),sigOf=run=>run.path.join(';'),sameAim=(x,y)=>x.length===y.length&&x.every((v,k)=>v===y[k]);
 const minRuns=[],maxRuns=[];let rejectedRun=null;
 goldSearch:for(let i=0;i<assigns.length;i++){
 const assign=assigns[i],runs=minRuns[i]||(minRuns[i]=_simRun('min',assign));
@@ -4672,13 +4672,13 @@ const out={...proof,party:cloneSolverConditionParty(proof.party)};
 const solved=solveSolverConditionBounds(combo,targets,hexId,bat,out,tensionMul,fourceEls,accept);
 if(solved)Object.assign(out,solved);
 const captured=verifySolverConditionParty(combo,targets,hexId,bat,out.party,out.assign,
-tensionMul,fourceEls,out.eggAssign,true,{accept},undefined,out.eggTargets);
+tensionMul,fourceEls,out.eggAssign,true,{accept,kind:out.fallbackKind},undefined,out.eggTargets);
 if(captured&&captured.rating===out.rating&&captured.fallbackKind===out.fallbackKind)out.actionResults=captured.actionResults;
 return out;
 }
 function solveSolverConditionBounds(combo,targets,hexId,bat,proof,tensionMul,fourceEls,accept){
 const vars=solverConditionVariables(combo,proof.assign,targets,proof.pathSig);
-const trace=[],info={trace,accept},seek=proof.seek;
+const trace=[],info={trace,accept,kind:proof.fallbackKind},seek=proof.seek;
 if(!seek){
 const base=verifySolverConditionParty(combo,targets,hexId,bat,proof.party,proof.assign,tensionMul,fourceEls,proof.eggAssign,false,info,undefined,proof.eggTargets);
 if(!base||base.rating!==proof.rating||info.fallbackKind!==proof.fallbackKind)return null;
@@ -4711,10 +4711,8 @@ else if(single<0)for(const i of depends)stats[vars[i].key]=values?values[i]:uppe
 const d=skillDamagePerHit(sk,action,hex,stats,on?fEls:null,n);
 const t=solverActionDamage(sk,hex,on?fEls:null,d,hits,mul,lv);
 const result={min:t.min,max:t.max,head:t.head,hitmin:d.min,hitmax:d.max};
-if(seek){
 const off=on&&!sk.el&&solverActionDamage(sk,hex,null,skillDamagePerHit(sk,action,hex,stats,null,n),hits,mul,lv);
 Object.assign(result,{none:d.none?1:0,plus:d.metalEff||0,gain:off&&(t.min>off.min||t.max>off.max)?1:0});
-}
 if(depends.length>1)cache.set(key,result);else cache[key]=result;
 return result;
 },dip(part,b){
@@ -4763,6 +4761,13 @@ else add(expression(cumulative[i],'max'),'le',inst.hpLow-1);
 }
 }
 if(orange.length)add({any:orange});
+if(fource)for(const m of proof.rating==='orange'?['max']:['min','max']){
+const rows=trace.filter(row=>row.mode===m),killed=new Set(),gains=[];
+for(const row of rows)for(const step of row.steps)if(!step.execute&&step.dead)killed.add(step.index);
+for(const row of rows)if(row.fourceOn)for(const step of row.steps)if(!step.execute&&killed.has(step.index))
+gains.push({expr:[{t:term(row.ci,instances[step.index].hex,true,undefined,row.targets.indexOf(step.index)+1),part:'gain',sign:1}],op:'ge',rhs:1});
+if(gains.length)add({any:gains});
+}
 const ready=c=>{
 c.directions=new Int8Array(vars.length);
 let fixed=0;
@@ -4786,8 +4791,13 @@ const t=x.term,key=t.single>=0?(point?point[t.single]:x.upper?box[t.single].hi:b
 if(seek&&!point){
 if(t.single<0){if(t.depends.some(vi=>box[vi].lo<box[vi].hi))return true;}
 else if(box[t.single].lo<box[t.single].hi&&t.dip(x.part,box[t.single])){
-let far=x.upper?-Infinity:Infinity;
+const memo=x.part+(x.upper?'+':'-')+box[t.single].lo+','+box[t.single].hi;
+let far=t.dips[memo];
+if(far===undefined){
+far=x.upper?-Infinity:Infinity;
 for(let at=box[t.single].lo,probe=[];at<=box[t.single].hi;at++){probe[t.single]=at;far=Math[x.upper?'max':'min'](far,t.read(probe)[x.part]);}
+t.dips[memo]=far;
+}
 value+=x.sign*far;continue;
 }
 }
@@ -4853,7 +4863,7 @@ if(point===false||point===null)return null;
 if(point!==true)return point;
 if(boundsReplays>=SOLVER_CONDITION_BOUNDS_REPLAY_LIMIT){boundsExhausted=true;return null;}
 boundsReplays++;
-const p=verifySolverConditionParty(combo,targets,hexId,bat,partyAt(values),proof.assign,tensionMul,fourceEls,proof.eggAssign,false,{accept},undefined,proof.eggTargets);
+const p=verifySolverConditionParty(combo,targets,hexId,bat,partyAt(values),proof.assign,tensionMul,fourceEls,proof.eggAssign,false,{accept,kind:proof.fallbackKind},undefined,proof.eggTargets);
 point=p&&p.rating===proof.rating&&p.fallbackKind===proof.fallbackKind?p:null;points.set(key,point);
 if(point)boundsRejectStreak=0;
 else if(!boundsSlicing&&++boundsRejectStreak>SOLVER_CONDITION_BOUNDS_REJECT_STREAK)boundsExhausted=true;
@@ -5279,12 +5289,12 @@ const mon=getMonDB(hexId),out=diagnostic||{};
 const total=targets&&targets.length?groupTotal(targets):1;
 const rating=evaluatedRating===undefined?checkSolverDamage(combo,hexId,mon,targets,
 tensionMul,fourceEls,out,assign,forcedEggAssign,party,
-{captureActions,eggTargets,...(out.runs&&{trace:[],runs:out.runs}),...(out.trace&&{trace:out.trace}),
-accept:run=>run.actualAT+solverRoundCost(combo,total,run.r1Removal)===bat&&(!out.accept||out.accept(run.actionResults))}):evaluatedRating;
+{captureActions:captureActions||!!out.accept,eggTargets,bat,...(out.runs&&{trace:[],runs:out.runs}),...(out.trace&&{trace:out.trace}),
+accept:run=>(!out.accept||out.accept(run.actionResults))&&(!('kind'in out)||run.fallbackKind===out.kind)}):evaluatedRating;
 if(!rating)return null;
 const r1Removal=combo.length>SOLVER_ROUND_SIZE&&!!out.r1Removal;
 const cost=solverRoundCost(combo,total,r1Removal);
-if(!Number.isInteger(out.actualAT)||out.actualAT+cost!==bat)return null;
+if(!Number.isInteger(out.actualAT))return null;
 if(rating==='gold'&&evaluatedRating!==undefined&&_solverGoldState)_solverGoldState.gold=true;
 return{rating,party,assign:assign.slice(),eggAssign:out.eggAssign||forcedEggAssign||null,eggTargets:out.eggTargets||eggTargets||{},
 finIdx:out.finIdx,r1Removal,actualAT:out.actualAT,roundCost:cost,pathSig:out.pathSig||'',
@@ -6273,7 +6283,7 @@ if(!needsEval[pi])continue;
 if(permBests[pi]&&getRankOrderValue(permBests[pi].rating)===2)continue;
 _x12Kills={c:permCombos[pi],k:killSets[pi]};
 const out={};
-const rating=checkSolverDamage(permCombos[pi],hexId,mon,killTargets,1,null,out,assign,undefined,chars),rejected=out.rejectLast===undefined?Infinity:out.rejectLast;
+const rating=checkSolverDamage(permCombos[pi],hexId,mon,killTargets,1,null,out,assign,undefined,chars,{bat}),rejected=out.rejectLast===undefined?Infinity:out.rejectLast;
 _x12Kills=null;last=Math.max(last,rejected);lasts[pi]=Math.max(lasts[pi],rejected);
 if(rating){
 const rk=getRankOrderValue(rating);
