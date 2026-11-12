@@ -523,7 +523,7 @@ function openModal(configKey){
 byId(MODAL_CONFIGS[configKey].id).style.display='flex';
 switchTab(configKey,['TW','EN','JP'].includes(DISPLAY_LANG)?DISPLAY_LANG:'TW');
 }
-function closeConfiguredModal(configKey){
+function closeModal(configKey){
 byId(MODAL_CONFIGS[configKey].id).style.display='none';
 }
 window.addEventListener('DOMContentLoaded',()=>{

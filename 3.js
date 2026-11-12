@@ -1879,7 +1879,7 @@ patSel.options.add(new Option('----','none'));
 appendPatternOptions(patSel);
 }
 }
-function updateSeedInspector(){var _ios15,_ios16;
+function updateSeedInspector(){
 window._siBuckets=null;
 _siInspectorGen++;
 let _solverOpt;
@@ -2032,9 +2032,8 @@ const labels=mg.slice(1).map(s=>mergedSpeciesLabel(s));
 const supText=labels.length?'+'+labels.join('+'):'';
 const mainPrefix=mainTag+(labels.length?' ':'');
 const supTag=labels.length?`<span style="color:#a8f">${supText}</span>`:'';
-const hp=labels.length===1?(((_ios16=((_ios15=getMonDB(mg[1].hex))==null?void 0:_ios15.s[0]))!=null?_ios16:0)):null;
-const base=mainPrefix+(hp===null?supTag:`<span style="color:#a8f">${supText} HP${hp}</span>`);
-const fleeDesc=mainPrefix+supTag+(hp===null?'':` <span style="color:#f44">HP${hp}</span>`)+pTag;
+const base=mainPrefix+supTag;
+const fleeDesc=base+pTag;
 const killAllDesc=base+_pendTag(state)+pTag;
 if(state==='flee')_addResult(T,-1,fleeDesc);
 else if(state==='fallback')_addResult(T,T,base+pTag,mg,undefined,fleeDesc);
